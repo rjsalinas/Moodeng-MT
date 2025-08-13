@@ -1,0 +1,54 @@
+# TweetTaglish Codebase - .gitignore
+
+# Virtual environment (created by run_extractor scripts)
+.venv/
+venv/
+env/
+
+# Data outputs and extracted content
+data/
+extracted_tweets/
+processed_tweets/
+ai_preprocessed/
+output/
+
+# Log files
+*.log
+twitter_extraction.log
+processing.log
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment variables (contains sensitive API tokens)
+.env
+.env.local
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# pytest cache
+.pytest_cache/
+.coverage
+
+# mypy cache
+.mypy_cache/
+
+# Temporary files
+*.tmp
+*.temp
