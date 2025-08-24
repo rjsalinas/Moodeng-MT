@@ -1,0 +1,70 @@
+# Logs (exclude all logs)
+logs/
+*.log
+*.jsonl
+
+# Large data files (exclude only very large datasets)
+dataset_*.json
+tweets_id_text_only.csv
+tweets_id_text_normalized.csv
+english_translation_from_preprocessed_texts.csv
+
+# Keep important CSV files (smaller, processed results)
+!tweets_id_filipino_text_only.csv
+!tweets_id_filipino_text_normalized.csv
+!tweets_id_non_fil_tag_taglish.csv
+
+# Model files (large)
+fine-tuned-mbart-tl2en/
+*.safetensors
+*.bin
+*.ckpt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Keep important config files
+!rules.json
+!requirements.txt
+!*.md
+!*.py
+!*.bat
+!*.ps1
