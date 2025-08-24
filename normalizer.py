@@ -123,24 +123,44 @@ class FilipinoNormalizer:
         logs = []
         original_text = text
         
-        # Remove URLs
-        text = re.sub(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', '', text)
+        # Remove URLs more aggressively
+        url_patterns = [
+            r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',  # Full URLs
+            r'www\.[^\s]+',  # www. URLs
+            r'[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?',  # Domain patterns
+            r'bit\.ly/[a-zA-Z0-9]+',  # Bit.ly URLs
+            r'tiny\.url/[a-zA-Z0-9]+',  # Tiny.url URLs
+            r'[a-zA-Z0-9]+\.[a-zA-Z]{2,}',  # Simple domain patterns
+        ]
+        
+        for pattern in url_patterns:
+            text = re.sub(pattern, '', text)
+        
+        # Remove truncated URLs and web artifacts
+        web_artifacts = [
+            r'chron\.com[^\s]*',  # Chron.com patterns
+            r'[a-zA-Z0-9]+\.[a-zA-Z]{2,}\.\.\.',  # Truncated URLs with ...
+            r'[a-zA-Z0-9]+\.[a-zA-Z]{2,}\.\.\.',  # Truncated URLs with ...
+        ]
+        
+        for pattern in web_artifacts:
+            text = re.sub(pattern, '', text)
         
         # Remove extra whitespace
         text = re.sub(r'\s+', ' ', text.strip())
         
-        # Remove non-printing characters
+        # Remove non-printing characters and extended Unicode
         text = re.sub(r'[^\x20-\x7E\xA0-\xFF\u0100-\u017F\u0180-\u024F\u1E00-\u1EFF\u2C60-\u2C7F\uA720-\uA7FF]', '', text)
         
         if text != original_text:
             logs.append(self._mk_edit_log(
                 rule_id="TEXT_CLEAN_01",
-                reason="basic_text_cleaning",
+                reason="enhanced_text_cleaning",
                 before=original_text,
                 after=text,
                 span=None,
                 context=context,
-                meta={"pattern": "URL removal, whitespace cleanup, non-printing chars"}
+                meta={"pattern": "Enhanced URL removal, whitespace cleanup, non-printing chars, web artifacts"}
             ))
         
         return text, logs
@@ -225,30 +245,63 @@ class FilipinoNormalizer:
         return text, logs
 
     def _apply_social_media_cleaning(self, text, context):
-        """Remove hashtags, mentions, and social media artifacts - preserve English text"""
+        """Remove hashtags, mentions, emojis, and social media artifacts - preserve English text"""
         logs = []
         original_text = text
         
-        # Remove hashtags (keep the text after # but remove the # symbol)
-        text = re.sub(r'#(\w+)', r'\1', text)
+        # Remove hashtags completely (remove both # and the text)
+        text = re.sub(r'#\w+', '', text)
         
-        # Remove mentions (@username)
+        # Remove mentions (@username) completely
         text = re.sub(r'@\w+', '', text)
         
-        # Remove only clear social media artifacts (be more selective)
+        # Remove emojis and emoticons more aggressively
+        # Remove common emoji patterns
+        emoji_patterns = [
+            r'[\U0001F600-\U0001F64F]',  # Emoticons
+            r'[\U0001F300-\U0001F5FF]',  # Misc symbols and pictographs
+            r'[\U0001F680-\U0001F6FF]',  # Transport and map symbols
+            r'[\U0001F1E0-\U0001F1FF]',  # Regional indicator symbols
+            r'[\U00002600-\U000027BF]',  # Misc symbols
+            r'[\U0001F900-\U0001F9FF]',  # Supplemental symbols and pictographs
+            r'[\U0001FA70-\U0001FAFF]',  # Symbols and pictographs extended-A
+        ]
+        
+        for pattern in emoji_patterns:
+            text = re.sub(pattern, '', text)
+        
+        # Remove common emoticon patterns
+        emoticon_patterns = [
+            r':\)|:\(|:D|:P|:O|:S|:X|:Z',  # Basic emoticons
+            r'😀|😃|😄|😁|😆|😅|😂|🤣|😊|😇|🙂|🙃|😉|😌|😍|🥰|😘|😗|😙|😚|😋|😛|😝|😜|🤪|🤨|🧐|🤓|😎|🤩|🥳|😏|😒|😞|😔|😟|😕|🙁|☹️|😣|😖|😫|😩|🥺|😢|😭|😤|😠|😡|🤬|🤯|😳|🥵|🥶|😱|😨|😰|😥|😓|🤗|🤔|🤭|🤫|🤥|😶|😐|😑|😯|😦|😧|😮|😲|🥱|😴|😪|😵|🤐|🥴|🤢|🤮|🤧|😷|🤒|🤕|🤑|🤠',
+            r'🤡|👻|👽|👾|🤖|😺|😸|😹|😻|😼|😽|🙀|😿|😾|🙈|🙉|🙊|💌|💘|💝|💖|💗|💙|💚|❤️|🧡|💛|💜|🖤|💔|❣️|💕|💞|💓|💗|💖|💘|💝|💟|♥️|💎|🔶|🔷|🔸|🔹|🔺|🔻|💠|🔘|🔴|🟠|🟡|🟢|🔵|🟣|⚫|⚪|🟤|🔺|🔻|💠|🔘|🔴|🟠|🟡|🟢|🔵|🟣|⚫|⚪|🟤',
+        ]
+        
+        for pattern in emoticon_patterns:
+            text = re.sub(pattern, '', text, flags=re.IGNORECASE)
+        
+        # Remove social media patterns more aggressively
         social_patterns = [
             r'rt\s+@\w+',           # RT @username
             r'via\s+@\w+',          # via @username
             r'cc\s+@\w+',           # cc @username
             r'follow\s+@\w+',       # follow @username
             r'check\s+@\w+',        # check @username
+            r'fb\s*\.\s*com',       # fb.com
+            r'www\s*\.',            # www.
+            r'http[s]?\s*://',      # http:// or https://
+            r'bit\s*\.\s*ly',       # bit.ly
+            r'tiny\s*\.\s*url',     # tiny.url
         ]
         
         for pattern in social_patterns:
             text = re.sub(pattern, '', text, flags=re.IGNORECASE)
         
+        # Remove Korean/Japanese/Chinese characters that might be in hashtags
+        text = re.sub(r'[\uAC00-\uD7AF\u3040-\u309F\u30A0-\U0001F9FF]', '', text)
+        
         # Remove excessive punctuation and symbols but keep basic punctuation
-        # Be more conservative - only remove clearly non-word characters
+        # Be more aggressive - remove more non-word characters
         text = re.sub(r'[^\w\s\-\'\.\,\!\?\:\;\(\)]', '', text)
         
         # Clean up multiple punctuation (be gentle) - but preserve ending punctuation
@@ -260,12 +313,12 @@ class FilipinoNormalizer:
         if text != original_text:
             logs.append(self._mk_edit_log(
                 rule_id="SOCIAL_CLEAN_01",
-                reason="social_media_cleaning",
+                reason="enhanced_social_media_cleaning",
                 before=original_text,
                 after=text,
                 span=None,
                 context=context,
-                meta={"pattern": "hashtag, mention, and social media artifact removal with punctuation preservation"}
+                meta={"pattern": "aggressive hashtag, mention, emoji, and social media artifact removal"}
             ))
         
         return text, logs
