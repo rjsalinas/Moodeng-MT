@@ -696,9 +696,7 @@ class FilipinoNormalizer:
         transposition_patterns = [
             (r'\balakt\b', 'aklat'),      # alakt → aklat
             (r'\bklat\b', 'aklat'),       # klat → aklat (missing initial vowel)
-            (r'\bnga\b', 'ang'),          # nga → ang (common transposition)
             (r'\bngay\b', 'ay'),          # ngay → ay (remove ng prefix)
-            (r'\bnga\b', 'na'),           # nga → na (remove g)
         ]
         
         for pattern, replacement in transposition_patterns:
