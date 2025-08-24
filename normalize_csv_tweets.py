@@ -112,8 +112,8 @@ def normalize_csv_tweets(input_csv, output_csv, rules_path='rules.json', log_dir
 
 if __name__ == "__main__":
     # File paths
-    input_file = "tweets_id_text_only.csv"
-    output_file = "tweets_id_text_normalized.csv"
+    input_file = "tweets_id_filipino_text_only.csv"
+    output_file = "tweets_id_filipino_text_normalized.csv"
     
     # Run the normalization
     normalize_csv_tweets(input_file, output_file)
