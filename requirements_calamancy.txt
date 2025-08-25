@@ -1,0 +1,20 @@
+# Requirements for CalamanCy Integration with Filipino Text Preprocessing
+# Install with: pip install -r requirements_calamancy.txt
+
+# Core CalamanCy and spaCy
+calamancy>=0.1.0
+spacy[transformers]>=3.7.0
+
+# Tagalog language model (will be downloaded automatically)
+# python -m spacy download tl_core_news_sm
+
+# Enhanced preprocessing dependencies
+pandas>=1.3.0
+numpy>=1.21.0
+
+# Logging and utilities
+tqdm>=4.60.0
+
+# Optional: For advanced NLP features
+# spacy-transformers>=1.2.0
+# spacy-legacy>=3.0.0
