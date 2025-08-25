@@ -29,8 +29,10 @@ import re
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 import nltk
 
-# Suppress deprecation warnings
+# Suppress deprecation warnings and PEFT warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", message=".*tie_word_embeddings.*")
+warnings.filterwarnings("ignore", message=".*save_embedding_layers.*")
 
 # Download NLTK data for BLEU calculation
 try:
@@ -281,49 +283,68 @@ def main():
             
             # Data augmentation for common Filipino patterns
             def augment_filipino_data(df):
-                augmented = []
+                augmented_rows = []
                 for _, row in df.iterrows():
                     # Original pair
-                    augmented.append(row)
+                    augmented_rows.append({
+                        "src": row["src"],
+                        "tgt": row["tgt"]
+                    })
                     
                     # Synonym replacement for common words
                     src_aug = row["src"]
                     if "kamusta" in src_aug.lower():
                         src_aug2 = src_aug.replace("kamusta", "kumusta")
                         if src_aug2 != row["src"]:
-                            augmented.append({
+                            augmented_rows.append({
                                 "src": src_aug2,
-                                "tgt": row["tgt"],
-                                "complexity": row["complexity"]
+                                "tgt": row["tgt"]
                             })
                     
                     if "salamat" in src_aug.lower():
                         src_aug3 = src_aug.replace("salamat", "thank you")
                         if src_aug3 != row["src"]:
-                            augmented.append({
+                            augmented_rows.append({
                                 "src": src_aug3,
-                                "tgt": row["tgt"],
-                                "complexity": row["complexity"]
+                                "tgt": row["tgt"]
                             })
                 
-                return pd.DataFrame(augmented)
+                return pd.DataFrame(augmented_rows)
             
             # Apply augmentation
-            df = augment_filipino_data(df)
+            try:
+                df = augment_filipino_data(df)
+                print(f"✅ Data augmentation completed: {len(df)} total pairs")
+            except Exception as e:
+                print(f"⚠️  Data augmentation failed: {e}")
+                print("Continuing with original dataset...")
             
             # Calculate complexity for curriculum learning
             def get_sentence_complexity(text):
-                words = len(text.split())
-                punct_count = len([c for c in text if c in '.,!?;:'])
-                # Add complexity for mixed language content
-                mixed_lang = len(re.findall(r'[a-zA-Z]+', text)) > 0
-                complexity = words + punct_count + (5 if mixed_lang else 0)
-                return complexity
+                try:
+                    if pd.isna(text) or not isinstance(text, str):
+                        return 0
+                    words = len(text.split())
+                    punct_count = len([c for c in text if c in '.,!?;:'])
+                    # Add complexity for mixed language content
+                    mixed_lang = len(re.findall(r'[a-zA-Z]+', text)) > 0
+                    complexity = words + punct_count + (5 if mixed_lang else 0)
+                    return complexity
+                except Exception as e:
+                    # Fallback complexity calculation
+                    return len(str(text)) if text else 0
             
-            df["complexity"] = df["src"].apply(get_sentence_complexity)
-            
-            # Sort by complexity for curriculum learning
-            df = df.sort_values("complexity").reset_index(drop=True)
+            try:
+                df["complexity"] = df["src"].apply(get_sentence_complexity)
+                
+                # Sort by complexity for curriculum learning
+                df = df.sort_values("complexity").reset_index(drop=True)
+                
+                print(f"✅ Complexity calculation completed")
+            except Exception as e:
+                print(f"⚠️  Complexity calculation failed: {e}")
+                print("Adding default complexity scores...")
+                df["complexity"] = 1  # Default complexity
             
             print(f"✅ Loaded {len(df)} high-quality translation pairs from filipino_english_parallel_corpus.csv")
             print(f"📊 Complexity range: {df['complexity'].min()} - {df['complexity'].max()}")
@@ -350,10 +371,46 @@ def main():
             }
             df = pd.DataFrame(sample_data)
         
-        df.columns = df.columns.str.strip()  # Remove any hidden spaces
-        df = df.dropna(subset=["src", "tgt"])  # Remove bad rows
-        df["src"] = df["src"].astype(str)  # Ensure correct type
-        df["tgt"] = df["tgt"].astype(str)
+        # Clean column names
+        try:
+            df.columns = df.columns.str.strip()  # Remove any hidden spaces
+        except Exception as e:
+            print(f"⚠️  Column cleaning failed: {e}")
+        
+        # Ensure required columns exist
+        if "src" not in df.columns or "tgt" not in df.columns:
+            print("❌ Required columns 'src' and 'tgt' not found in dataset")
+            print(f"Available columns: {list(df.columns)}")
+            print("Creating sample dataset instead...")
+            
+            # Create sample Filipino-English pairs
+            sample_data = {
+                "src": [
+                    "Kamusta ka?",
+                    "Salamat sa tulong mo.",
+                    "Magandang umaga.",
+                    "Paalam na.",
+                    "Gusto ko ng kape."
+                ],
+                "tgt": [
+                    "How are you?",
+                    "Thank you for your help.",
+                    "Good morning.",
+                    "Goodbye.",
+                    "I want coffee."
+                ]
+            }
+            df = pd.DataFrame(sample_data)
+        
+        # Clean and validate data
+        try:
+            df = df.dropna(subset=["src", "tgt"])  # Remove bad rows
+            df["src"] = df["src"].astype(str)  # Ensure correct type
+            df["tgt"] = df["tgt"].astype(str)
+            print(f"✅ Data cleaning completed: {len(df)} valid pairs")
+        except Exception as e:
+            print(f"⚠️  Data cleaning failed: {e}")
+            print("Attempting to continue with available data...")
         
         print(f"✅ Dataset loaded: {len(df)} samples")
         print(f"📝 Sample data:")
@@ -392,7 +449,7 @@ def main():
     try:
         model = MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-50-many-to-many-mmt")
         
-        # Enhanced LoRA configuration with maximum capacity
+        # Enhanced LoRA configuration with only supported modules
         lora_config = LoraConfig(
             r=64,  # Increased rank for maximum capacity
             lora_alpha=128,  # Increased alpha proportionally
@@ -401,7 +458,6 @@ def main():
                 "fc1", "fc2",  # Feed-forward components
                 "self_attn.q_proj", "self_attn.v_proj", "self_attn.k_proj", "self_attn.out_proj",  # Encoder attention
                 "encoder_attn.q_proj", "encoder_attn.v_proj", "encoder_attn.k_proj", "encoder_attn.out_proj",  # Cross attention
-                "layernorm_embedding", "final_layer_norm",  # Normalization layers
                 "embed_tokens"  # Embedding layer
             ],
             lora_dropout=0.05,  # Reduced dropout for better training
@@ -410,7 +466,10 @@ def main():
             inference_mode=False
         )
         
+        print("🔧 Applying LoRA configuration...")
         model = get_peft_model(model, lora_config)
+        
+        print("📱 Moving model to device...")
         model = model.to(device)
         
         # Print model info
@@ -421,8 +480,20 @@ def main():
         print(f"🎯 Trainable parameters: {trainable_params:,}")
         print(f"💾 Memory efficient: {trainable_params/total_params*100:.1f}%")
         
+        # Verify LoRA was applied correctly
+        lora_modules = 0
+        for name, module in model.named_modules():
+            if "lora" in name.lower():
+                lora_modules += 1
+        
+        print(f"🔧 LoRA modules applied: {lora_modules}")
+        
     except Exception as e:
         print(f"❌ Error loading model: {e}")
+        print("🔍 Troubleshooting tips:")
+        print("   • Check if PEFT version is compatible with transformers")
+        print("   • Try updating: pip install --upgrade peft transformers")
+        print("   • Ensure torch version is compatible")
         return
     
     # Advanced Training Setup with multiple loss functions and scheduling
