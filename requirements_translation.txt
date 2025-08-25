@@ -1,0 +1,22 @@
+# Requirements for Filipino-to-English Translation Model Fine-tuning
+# Install with: pip install -r requirements_translation.txt
+
+# Core ML libraries
+torch>=2.0.0
+transformers>=4.30.0
+peft>=0.4.0
+
+# Data processing
+pandas>=1.3.0
+numpy>=1.21.0
+
+# Progress bars and utilities
+tqdm>=4.60.0
+
+# Optional: For better performance
+accelerate>=0.20.0
+datasets>=2.0.0
+
+# Optional: For logging and monitoring
+tensorboard>=2.10.0
+wandb>=0.15.0
