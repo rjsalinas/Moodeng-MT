@@ -43,9 +43,23 @@ python model_training.py
 - Optional: integrate with standard Transformers callbacks if configured (TensorBoard/W&B)
 
 ## Outputs
-- fine-tuned-mbart-tl2en/ (checkpoints during training)
-- fine-tuned-mbart-tl2en-best/ (best adapter + configs)
+- `fine-tuned-mbart-tl2en/` (checkpoints during training)
+- `fine-tuned-mbart-tl2en-best/` (best adapter + configs; used by inference)
 - Console logs; optional batch logs from preprocessing
+
+## Inference usage
+Translate Filipino text using the best adapter:
+```bash
+python translate_with_model.py --text "kamusta ka?"
+```
+Batch translate from a CSV column:
+```bash
+python translate_with_model.py --input_csv filipino_english_parallel_corpus.csv \
+  --src_col src --out_csv english_translation_from_preprocessed_texts.csv
+```
+Notes:
+- The script loads `fine-tuned-mbart-tl2en-best/` by default if present.
+- Set `--model_dir` to override the adapter path when needed.
 
 ## Recommended workflow
 ```bash

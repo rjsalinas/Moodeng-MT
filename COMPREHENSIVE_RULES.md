@@ -162,11 +162,11 @@ Your preprocessing system now implements **ALL 10 comprehensive normalization op
 - **Solution**: Enhanced cleanup rules that ensure exactly one period at the end
 - **Examples**:
   - `"Hello world..."` → `"hello world."` ✅
-  - `"Kamusta ka???"` → `"kamusta ka."` ✅
+  - `"Kamusta ka???"` → `"kamusta ka?"` ✅
   - `"Test...!!!"` → `"test."` ✅
   - `"q nakapunta na 2 the mall!!!..."` → `"ako naka punta na to the mall."` ✅
 
-**Implementation**: Enhanced `_apply_final_cleanup()` and `_apply_sentence_end_periods()` methods
+**Implementation**: Enhanced `_apply_final_cleanup()` and `_apply_sentence_end_periods()` methods to preserve `!` and `?`, and only add `.` when none exists
 
 ---
 

@@ -1,8 +1,54 @@
-# 🇵🇭 Filipino Text Preprocessing & Normalization System
+# 🇵🇭 Filipino Text Preprocessing, Enhancement, and mBART Fine‑tuning
 
-A comprehensive text preprocessing and normalization system designed specifically for Filipino/Tagalog text, with support for mixed Taglish (Tagalog-English) content and advanced language processing capabilities.
+This repository contains two complementary pipelines:
 
-## 🚀 Features
+1) A Filipino/Tagalog tweet normalization system (rule‑ and feature‑based)
+2) An enhanced Filipino→English translation pipeline built on mBART‑50 with CalamanCy‑powered preprocessing
+
+If you are here to reproduce the machine translation results, start with the Quickstart below. The original normalization documentation remains further down this file.
+
+## 🔰 Quickstart: Enhanced Translation Pipeline
+
+### 1) Prepare/Enhance the Parallel Corpus
+
+Input CSV: `filipino_english_parallel_corpus.csv`
+- Expected columns: either `text` + `english_translation` or already normalized `src` + `tgt`.
+
+Run CalamanCy‑enhanced preprocessing in batches (preferred for speed and reproducibility):
+
+```bash
+python batch_process_calamancy.py
+```
+
+This generates:
+- `full_enhanced_parallel_corpus.csv` (preferred input for training)
+- Optional `enhanced_batch_XXX.csv` backups and `batch_processing.log`
+
+### 2) Fine‑tune mBART‑50 (LoRA)
+
+Run the enhanced training script. It prefers the enhanced CSV and falls back to raw CSV if needed.
+
+```bash
+python model_training_enhanced.py
+```
+
+Outputs:
+- `fine-tuned-mbart-tl2en/` and `fine-tuned-mbart-tl2en-best/` (LoRA adapters + config)
+
+### Optional: Baseline (no enhanced preprocessing)
+
+```bash
+python model_training.py
+```
+
+### Where to read more
+- `PREPROCESSING_PIPELINE.md`: End‑to‑end preprocessing (now includes CalamanCy batch pipeline and inference note)
+- `MODEL_TRAINING.md`: Training objectives, losses, schedules, checkpoints, and inference usage
+- `README_TRANSLATION.md`: Practical training/inference guide aligned with scripts
+- `README_CALAMANCY_INTEGRATION.md`: Details of CalamanCy‑based enhancements and output columns
+- `ENHANCED_FEATURES.md`: Feature highlights for Filipino tweet processing
+
+## 🚀 Features (Normalization System)
 
 ### **Core Normalization Operations**
 - **Substitution**: Orthographic variants (o↔u, e↔i, y↔i, ch↔ts)

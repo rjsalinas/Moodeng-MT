@@ -432,8 +432,8 @@ def main():
         train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
         
         # Create data loaders
-        train_dataloader = DataLoader(train_dataset, batch_size=4, shuffle=True)
-        val_dataloader = DataLoader(val_dataset, batch_size=4, shuffle=False)
+        train_dataloader = DataLoader(train_dataset, batch_size=2, shuffle=True)
+        val_dataloader = DataLoader(val_dataset, batch_size=2, shuffle=False)
         
         print(f"✅ DataLoader prepared:")
         print(f"   📚 Training samples: {len(train_dataset)}")

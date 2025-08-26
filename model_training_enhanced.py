@@ -8,11 +8,25 @@ This script integrates CalamanCy for enhanced Filipino text preprocessing:
 - Quality validation
 - Filipino-aware tokenization
 
+CUDA Error Handling Features:
+- Automatic CUDA memory management
+- Graceful fallback to CPU on persistent errors
+- Reduced batch size (2) to prevent VRAM issues
+- Error counting and automatic device switching
+- Periodic memory cleanup during training
+- Fixed custom loss functions to handle -100 ignore index
+- Improved language token ID handling for mBART-50
+- Enhanced generation parameters to prevent repetition
+- Better device mismatch detection and resolution
+
 Requirements:
     pip install torch transformers peft pandas tqdm calamancy spacy[transformers]
 
 Usage:
     python model_training_enhanced.py
+
+Debugging (if CUDA errors persist):
+    CUDA_LAUNCH_BLOCKING=1 python model_training_enhanced.py
 """
 
 import pandas as pd
@@ -24,6 +38,7 @@ from transformers import MBartForConditionalGeneration, MBart50Tokenizer, get_co
 from peft import get_peft_model, LoraConfig, TaskType
 from torch import optim
 from torch.amp import autocast, GradScaler
+from contextlib import nullcontext
 from tqdm import tqdm
 import os
 import warnings
@@ -70,28 +85,56 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 CUDA_ERROR_OCCURRED = False
 
+def manage_cuda_memory():
+    """Manage CUDA memory to prevent device-side asserts."""
+    if torch.cuda.is_available():
+        try:
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+        except Exception:
+            pass
+
 def safe_save_pretrained(model: torch.nn.Module, output_dir: str) -> bool:
     """Save by materializing a CPU state_dict to avoid CUDA asserts during serialization."""
     try:
+        # Force CUDA synchronization and move model to CPU
         if torch.cuda.is_available():
             try:
                 torch.cuda.synchronize()
+                torch.cuda.empty_cache()
             except Exception:
                 pass
-        model.eval()
+        
+        # Move model to CPU for safe saving
+        model_cpu = model.cpu()
+        model_cpu.eval()
+        
+        # Create CPU state dict
         state = {}
-        for k, v in model.state_dict().items():
+        for k, v in model_cpu.state_dict().items():
             try:
                 state[k] = v.detach().cpu()
             except Exception:
                 state[k] = v.clone().detach().cpu()
+        
         os.makedirs(output_dir, exist_ok=True)
+        
+        # Save using torch.save instead of safetensors to avoid CUDA issues
         torch.save(state, os.path.join(output_dir, "pytorch_model.bin"))
+        
+        # Save config separately
         try:
-            if hasattr(model, "config"):
-                model.config.save_pretrained(output_dir)
+            if hasattr(model_cpu, "config"):
+                model_cpu.config.save_pretrained(output_dir)
         except Exception:
             pass
+        
+        # Move model back to original device
+        if torch.cuda.is_available():
+            model.to("cuda")
+        else:
+            model.to("cpu")
+            
         return True
     except Exception as e:
         logger.exception("error_saving_model_safetensors")
@@ -104,7 +147,16 @@ try:
 except LookupError:
     nltk.download('punkt')
 
-# Advanced loss functions with R-Drop
+# Advanced loss functions with R-Drop - Fixed to handle -100 ignore index
+IGNORE_INDEX = -100
+
+def mask_ignore_index(pred, target):
+    """Mask out ignored tokens (-100) from predictions and targets."""
+    mask = target != IGNORE_INDEX
+    if mask.sum() == 0:  # All tokens are ignored
+        return None, None
+    return pred[mask], target[mask]
+
 class FocalLoss(nn.Module):
     """Focal Loss for handling class imbalance and hard examples."""
     def __init__(self, alpha=1, gamma=2):
@@ -113,7 +165,12 @@ class FocalLoss(nn.Module):
         self.gamma = gamma
     
     def forward(self, inputs, targets):
-        ce_loss = F.cross_entropy(inputs, targets, reduction='none')
+        # Mask out ignored tokens first
+        pred, target = mask_ignore_index(inputs, targets)
+        if pred is None:  # All tokens ignored
+            return torch.tensor(0.0, device=inputs.device, requires_grad=True)
+        
+        ce_loss = F.cross_entropy(pred, target, reduction='none')
         pt = torch.exp(-ce_loss)
         focal_loss = self.alpha * (1-pt)**self.gamma * ce_loss
         return focal_loss.mean()
@@ -128,11 +185,16 @@ class LabelSmoothingLoss(nn.Module):
         self.dim = dim
 
     def forward(self, pred, target):
+        # Mask out ignored tokens first
+        pred, target = mask_ignore_index(pred, target)
+        if pred is None:  # All tokens ignored
+            return torch.tensor(0.0, device=pred.device, requires_grad=True)
+        
         pred = pred.log_softmax(dim=self.dim)
         with torch.no_grad():
             true_dist = torch.zeros_like(pred)
             true_dist.fill_(self.smoothing / (self.cls - 1))
-            true_dist.scatter_(1, target.data.unsqueeze(1), self.confidence)
+            true_dist.scatter_(1, target.unsqueeze(1), self.confidence)
         return torch.mean(torch.sum(-true_dist * pred, dim=self.dim))
 
 class RDropLoss(nn.Module):
@@ -140,13 +202,20 @@ class RDropLoss(nn.Module):
     def __init__(self, alpha=4.0):
         super().__init__()
         self.alpha = alpha
-        self.ce = nn.CrossEntropyLoss(ignore_index=-100)
+        self.ce = nn.CrossEntropyLoss(ignore_index=IGNORE_INDEX)
     
     def forward(self, logits1, logits2, labels):
-        ce_loss = (self.ce(logits1, labels) + self.ce(logits2, labels)) / 2
+        # Mask out ignored tokens first
+        pred1, target = mask_ignore_index(logits1, labels)
+        pred2, _ = mask_ignore_index(logits2, labels)
+        
+        if pred1 is None:  # All tokens ignored
+            return torch.tensor(0.0, device=logits1.device, requires_grad=True)
+        
+        ce_loss = (self.ce(pred1, target) + self.ce(pred2, target)) / 2
         kl_loss = F.kl_div(
-            F.log_softmax(logits1, dim=-1), 
-            F.softmax(logits2, dim=-1), 
+            F.log_softmax(pred1, dim=-1), 
+            F.softmax(pred2, dim=-1), 
             reduction='batchmean'
         )
         return ce_loss + self.alpha * kl_loss
@@ -177,16 +246,25 @@ class TranslationDataset(Dataset):
             truncation=True
         )
         tgt = self.tokenizer(
-            tgt_text, 
-            return_tensors="pt", 
-            max_length=self.max_len, 
-            padding="max_length", 
+            text_target=tgt_text,
+            return_tensors="pt",
+            max_length=self.max_len,
+            padding="max_length",
             truncation=True
         )
         # Create labels and mask padding to -100 for CrossEntropyLoss
-        labels = tgt["input_ids"].squeeze()
+        labels = tgt.get("input_ids", tgt.get("labels")).squeeze()
         pad_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
         labels = labels.masked_fill(labels == pad_id, -100)
+        
+        # Validate labels are within valid range (excluding -100)
+        valid_labels = labels[labels != -100]
+        if valid_labels.numel() > 0:
+            max_label = valid_labels.max().item()
+            if max_label >= self.tokenizer.vocab_size:
+                print(f"⚠️  Warning: Label {max_label} exceeds vocab size {self.tokenizer.vocab_size}")
+                # Clamp labels to valid range
+                labels = torch.clamp(labels, -100, self.tokenizer.vocab_size - 1)
 
         return {
             "input_ids": src["input_ids"].squeeze(),
@@ -200,32 +278,63 @@ def translate_text(text, model, tokenizer, src_lang="tl_XX", tgt_lang="en_XX", m
     """
     if not isinstance(text, str) or len(text.strip()) == 0:
         return ""
+    
+    # Ensure model is on the correct device
+    current_device = next(model.parameters()).device
+    if current_device != device:
+        print(f"⚠️  Model device mismatch: {current_device} vs {device}")
+        model = model.to(device)
+    
+    # Set source language
     tokenizer.src_lang = src_lang
-    encoded = tokenizer(
-        text,
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        max_length=max_len
-    )
-    # Encode on active device
-    enc = {k: v.to(device) for k, v in encoded.items()}
-    bos_id = tokenizer.lang_code_to_id.get(tgt_lang, None)
-    if bos_id is None:
-        bos_id = tokenizer.eos_token_id
+    
+    # Encode input text
     try:
+        encoded = tokenizer(
+            text,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=max_len
+        )
+        
+        # Move to device
+        enc = {k: v.to(device) for k, v in encoded.items()}
+        
+        # Get language token IDs from tokenizer (no hardcoding)
+        bos_id = tokenizer.lang_code_to_id.get(tgt_lang, tokenizer.eos_token_id)
+        
+        print(f" Debug: src_lang={src_lang}, tgt_lang={tgt_lang}, bos_id={bos_id}")
+        print(f" Debug: Input shape: {enc['input_ids'].shape}")
+        
+        # Generate translation with better parameters
         with torch.no_grad():
             generated_tokens = model.generate(
                 **enc,
                 forced_bos_token_id=bos_id,
-                decoder_start_token_id=bos_id,
-                max_length=max_len
+                max_length=max_len,
+                num_beams=4,
+                early_stopping=True,
+                no_repeat_ngram_size=3,
+                length_penalty=0.8,
+                do_sample=False,  # Use deterministic generation for better quality
+                pad_token_id=tokenizer.pad_token_id,
+                eos_token_id=tokenizer.eos_token_id,
+                repetition_penalty=1.2  # Prevent repetition
             )
-        return tokenizer.decode(generated_tokens[0], skip_special_tokens=True)
+        
+        # Decode and return
+        translation = tokenizer.decode(generated_tokens[0], skip_special_tokens=True)
+        print(f"🔍 Debug: Generated tokens: {generated_tokens[0]}")
+        print(f"🔍 Debug: Translation: '{translation}'")
+        
+        return translation
+        
     except RuntimeError as e:
         # Fallback to CPU if CUDA asserts occur
         if "CUDA error" in str(e) or "device-side assert" in str(e):
             CUDA_ERROR_OCCURRED = True
+            print(f"⚠️  CUDA error in translation, falling back to CPU: {e}")
             try:
                 cpu_model = model.to("cpu")
                 enc_cpu = {k: v.to("cpu") for k, v in encoded.items()}
@@ -233,12 +342,30 @@ def translate_text(text, model, tokenizer, src_lang="tl_XX", tgt_lang="en_XX", m
                     generated_tokens = cpu_model.generate(
                         **enc_cpu,
                         forced_bos_token_id=bos_id,
-                        decoder_start_token_id=bos_id,
-                        max_length=max_len
+                        max_length=max_len,
+                        num_beams=3,
+                        early_stopping=True,
+                        no_repeat_ngram_size=2,
+                        length_penalty=0.8,
+                        do_sample=False,
+                        pad_token_id=tokenizer.pad_token_id,
+                        eos_token_id=tokenizer.eos_token_id,
+                        repetition_penalty=1.2
                     )
-                return tokenizer.decode(generated_tokens[0], skip_special_tokens=True)
-            except Exception:
+                translation = tokenizer.decode(generated_tokens[0], skip_special_tokens=True)
+                # Move model back to original device
+                model = model.to(device)
+                return translation
+            except Exception as cpu_e:
+                print(f"⚠️  CPU fallback also failed: {cpu_e}")
+                # Move model back to original device
+                model = model.to(device)
                 return ""
+        else:
+            print(f"⚠️  Runtime error in translation: {e}")
+            return ""
+    except Exception as e:
+        print(f"⚠️  Unexpected error in translation: {e}")
         return ""
 
 def check_requirements():
@@ -289,6 +416,13 @@ def load_and_enhance_dataset():
             # Basic validation
             df = df.dropna(subset=["src", "tgt"]).copy()
             df = df[(df["src"].astype(str).str.strip() != "") & (df["tgt"].astype(str).str.strip() != "")]
+            # Strict filter: drop rows containing @ or # (should be preprocessed away)
+            before_ct = len(df)
+            mask_clean = ~df["src"].astype(str).str.contains(r"[@#]") & ~df["tgt"].astype(str).str.contains(r"[@#]")
+            df = df[mask_clean]
+            removed_ct = before_ct - len(df)
+            if removed_ct > 0:
+                print(f"🧹 Removed {removed_ct} rows containing @ or # from enhanced dataset")
             print(f"✅ Using enhanced dataset directly: {len(df)} samples")
             # Return as-is without running CalamanCy again
             return df
@@ -305,9 +439,16 @@ def load_and_enhance_dataset():
             })
             
             # Basic data cleaning
-            df = df.dropna(subset=["src", "tgt"])
-            df = df[df["src"].str.strip() != ""]
-            df = df[df["tgt"].str.strip() != ""]
+            df = df.dropna(subset=["src", "tgt"]).copy()
+            df = df[df["src"].astype(str).str.strip() != ""]
+            df = df[df["tgt"].astype(str).str.strip() != ""]
+            # Strict filter: drop any rows containing @ or # (should be preprocessed away)
+            before = len(df)
+            mask_clean = ~df["src"].astype(str).str.contains(r"[@#]") & ~df["tgt"].astype(str).str.contains(r"[@#]")
+            df = df[mask_clean]
+            removed = before - len(df)
+            if removed > 0:
+                print(f"🧹 Removed {removed} rows containing @ or # from dataset")
             
             print(f"✅ Loaded {len(df)} translation pairs")
             
@@ -335,6 +476,17 @@ def load_and_enhance_dataset():
                             invalid = int(len(enhanced_df) - valid)
                             print(f"✅ Quality validation (by score≥0.7): {valid} valid, {invalid} invalid")
                     
+                    # Strict filter: drop rows containing @ or #
+                    try:
+                        enhanced_df = enhanced_df.dropna(subset=["src", "tgt"]).copy()
+                        before_ct2 = len(enhanced_df)
+                        mask_clean2 = ~enhanced_df["src"].astype(str).str.contains(r"[@#]") & ~enhanced_df["tgt"].astype(str).str.contains(r"[@#]")
+                        enhanced_df = enhanced_df[mask_clean2]
+                        removed_ct2 = before_ct2 - len(enhanced_df)
+                        if removed_ct2 > 0:
+                            print(f"🧹 Removed {removed_ct2} rows containing @ or # from enhanced data")
+                    except Exception:
+                        pass
                     return enhanced_df
                     
                 except Exception as e:
@@ -392,17 +544,20 @@ def main():
         print("   - Basic preprocessing only")
         print("   - Install with: pip install calamancy spacy[transformers]")
     
-    # Device setup
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # Device configuration for GPU training (standardize to cuda:0)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if device.type == "cuda":
         try:
             torch.cuda.set_device(0)
-        except Exception:
-            pass
-    print(f"Using device: {device}")
+            print(f"🚀 CUDA device: {torch.cuda.get_device_name(0)}")
+            print(f"💾 GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
+        except Exception as e:
+            print(f"⚠️  CUDA setup warning: {e}")
+    print(f"📱 Using device: {device}")
     
     if device.type == "cpu":
-        print("Warning: CUDA not available. Training will be slower on CPU.")
+        print("⚠️  Warning: CUDA not available. Training will be slower on CPU.")
+        print("   Consider installing PyTorch with CUDA support.")
     
     # Load tokenizer
     print("\nLoading tokenizer...")
@@ -410,10 +565,26 @@ def main():
         tokenizer = MBart50Tokenizer.from_pretrained("facebook/mbart-large-50-many-to-many-mmt")
         tokenizer.src_lang = "tl_XX"  # Filipino
         target_lang = "en_XX"  # English
+        tokenizer.tgt_lang = target_lang  # Ensure target language is set for text_target
+        
+        # Check available language codes
+        print(f"Available language codes: {list(tokenizer.lang_code_to_id.keys())}")
+        print(f"Filipino (tl_XX) ID: {tokenizer.lang_code_to_id.get('tl_XX', 'NOT FOUND')}")
+        print(f"English (en_XX) ID: {tokenizer.lang_code_to_id.get('en_XX', 'NOT FOUND')}")
+        
+        # Validate language codes exist
+        if 'tl_XX' not in tokenizer.lang_code_to_id:
+            print("⚠️  Warning: Filipino (tl_XX) language code not found in tokenizer!")
+            print("   This may cause translation issues.")
+        if 'en_XX' not in tokenizer.lang_code_to_id:
+            print("⚠️  Warning: English (en_XX) language code not found in tokenizer!")
+            print("   This may cause translation issues.")
+        
         # Ensure pad token exists (fallback to eos) to avoid device-side asserts from -1 padding
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
             tokenizer.pad_token_id = tokenizer.eos_token_id
+        
         print("Tokenizer loaded successfully")
     except Exception as e:
         print(f"Error loading tokenizer: {e}")
@@ -434,24 +605,32 @@ def main():
         # Use a CPU generator for deterministic splits (avoids device mismatch errors)
         g = torch.Generator()
 
-        # Split into train/val/test: 75/15/10 (but you asked 75/15/15; adjust exact counts)
+        # Split into train/val/test: 70/15/15
         total = len(full_dataset)
-        train_size = int(0.75 * total)
+        train_size = int(0.70 * total)
         val_size = int(0.15 * total)
-        test_size = total - train_size - val_size
+        test_size = int(0.15 * total)
+        
+        # Ensure exact split by adjusting for rounding
+        remaining = total - train_size - val_size - test_size
+        if remaining > 0:
+            train_size += remaining  # Add any remaining samples to training set
+        
         train_dataset, temp_dataset = random_split(full_dataset, [train_size, total - train_size], generator=g)
         val_dataset, test_dataset = random_split(temp_dataset, [val_size, test_size], generator=g)
 
-        # Create data loaders
+        # Create data loaders (GPU optimized with reduced batch size)
         pin = (device.type == "cuda")
-        train_dataloader = DataLoader(train_dataset, batch_size=4, shuffle=True, pin_memory=pin)
-        val_dataloader = DataLoader(val_dataset, batch_size=4, shuffle=False, pin_memory=pin)
-        test_dataloader = DataLoader(test_dataset, batch_size=4, shuffle=False, pin_memory=pin)
+        # Reduce batch size to prevent CUDA errors
+        batch_size = 2 if device.type == "cuda" else 4
+        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=pin)
+        val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, pin_memory=pin)
+        test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, pin_memory=pin)
 
-        print(f"DataLoader prepared:")
-        print(f"   Training samples: {len(train_dataset)}")
-        print(f"   Validation samples: {len(val_dataset)}")
-        print(f"   Test samples: {len(test_dataset)}")
+        print(f"DataLoader prepared (70/15/15 split):")
+        print(f"   Training samples: {len(train_dataset)} (70%)")
+        print(f"   Validation samples: {len(val_dataset)} (15%)")
+        print(f"   Test samples: {len(test_dataset)} (15%)")
         print(f"   Training batches: {len(train_dataloader)}")
         print(f"   Validation batches: {len(val_dataloader)}")
         print(f"   Test batches: {len(test_dataloader)}")
@@ -472,8 +651,7 @@ def main():
                 "q_proj", "v_proj", "k_proj", "out_proj",  # Attention components
                 "fc1", "fc2",  # Feed-forward components
                 "self_attn.q_proj", "self_attn.v_proj", "self_attn.k_proj", "self_attn.out_proj",  # Encoder attention
-                "encoder_attn.q_proj", "encoder_attn.v_proj", "encoder_attn.k_proj", "encoder_attn.out_proj",  # Cross attention
-                "embed_tokens"  # Embedding layer
+                "encoder_attn.q_proj", "encoder_attn.v_proj", "encoder_attn.k_proj", "encoder_attn.out_proj"  # Cross attention
             ],
             lora_dropout=0.05,  # Reduced dropout for better training
             bias="lora_only",  # Train bias terms for better adaptation
@@ -486,6 +664,13 @@ def main():
         
         print("📱 Moving model to device...")
         model = model.to(device)
+        # Make target language explicit for generation globally
+        try:
+            model.config.forced_bos_token_id = tokenizer.lang_code_to_id.get("en_XX")
+            if hasattr(model, "generation_config"):
+                model.generation_config.forced_bos_token_id = tokenizer.lang_code_to_id.get("en_XX")
+        except Exception:
+            pass
         
         # Print model info
         total_params = sum(p.numel() for p in model.parameters())
@@ -534,11 +719,15 @@ def main():
     # Training loop with curriculum learning
     print("\n🎯 Starting training with curriculum learning...")
     
-    num_epochs = 20
+    num_epochs = 20  # Full training for GPU
     best_val_loss = float('inf')
     best_bleu = 0.0
     patience_counter = 0
     patience = 5
+    
+    # CUDA error tracking
+    cuda_error_count = 0
+    max_cuda_errors = 100  # Maximum CUDA errors before switching to CPU fallback
     
     # Curriculum phases
     curriculum_phases = [
@@ -551,6 +740,11 @@ def main():
     current_phase = 0
     phase_epoch = 0
     
+    # Tracking per-epoch metrics for final averages
+    epoch_train_losses = []
+    epoch_val_losses = []
+    epoch_bleus = []
+
     for epoch in range(num_epochs):
         # Determine current curriculum phase
         if phase_epoch >= curriculum_phases[current_phase]["epochs"]:
@@ -568,7 +762,9 @@ def main():
         if 'complexity_score' in df.columns:
             phase_data = df[df['complexity_score'] <= current_threshold]
             phase_dataset = TranslationDataset(phase_data, tokenizer)
-            phase_dataloader = DataLoader(phase_dataset, batch_size=4, shuffle=True)
+            # Use same reduced batch size for curriculum phases
+            phase_batch_size = 2 if device.type == "cuda" else 4
+            phase_dataloader = DataLoader(phase_dataset, batch_size=phase_batch_size, shuffle=True, pin_memory=(device.type == "cuda"))
             print(f"📊 Phase data: {len(phase_data)} samples (complexity ≤ {current_threshold})")
         else:
             phase_dataloader = train_dataloader
@@ -581,42 +777,103 @@ def main():
         
         for batch_idx, batch in enumerate(train_progress):
             try:
-                # Move batch to device
-                input_ids = batch["input_ids"].to(device, non_blocking=True)
-                attention_mask = batch["attention_mask"].to(device, non_blocking=True)
-                labels = batch["labels"].to(device, non_blocking=True)
+                # Move batch to device with error handling
+                try:
+                    input_ids = batch["input_ids"].to(device, non_blocking=True)
+                    attention_mask = batch["attention_mask"].to(device, non_blocking=True)
+                    labels = batch["labels"].to(device, non_blocking=True)
+                except Exception as e:
+                    print(f"\n⚠️  Device transfer error in batch {batch_idx}: {e}")
+                    continue
                 if next(model.parameters()).device != device:
                     model.to(device)
                 
-                # Forward pass with mixed precision (CUDA only)
+                # Forward pass with mixed precision and error handling
                 from contextlib import nullcontext
-                amp_ctx = autocast(device_type="cuda", dtype=torch.float16) if device.type == "cuda" else nullcontext()
-                with amp_ctx:
-                    outputs = model(
-                        input_ids=input_ids,
-                        attention_mask=attention_mask,
-                        labels=labels
-                    )
-                    
-                    # Dynamic loss selection based on curriculum phase
-                    if current_phase == 0:  # Simple phase
-                        loss = outputs.loss
-                    elif current_phase == 1:  # Medium phase
+                try:
+                    amp_ctx = autocast(device_type="cuda", dtype=torch.float16) if device.type == "cuda" else nullcontext()
+                    with amp_ctx:
+                        outputs = model(
+                            input_ids=input_ids,
+                            attention_mask=attention_mask,
+                            labels=labels
+                        )
+                except RuntimeError as e:
+                    if "CUDA error" in str(e) or "device-side assert" in str(e):
+                        cuda_error_count += 1
+                        print(f"\n⚠️  CUDA error in forward pass (batch {batch_idx}): {e}")
+                        print(f"   CUDA errors so far: {cuda_error_count}/{max_cuda_errors}")
+                        
+                        # Try to clear CUDA cache and continue
+                        if torch.cuda.is_available():
+                            torch.cuda.empty_cache()
+                        
+                        # Switch to CPU if too many CUDA errors
+                        if cuda_error_count >= max_cuda_errors:
+                            print(f"\n🚨 Too many CUDA errors ({cuda_error_count}). Switching to CPU fallback...")
+                            device = torch.device("cpu")
+                            model = model.to(device)
+                            scaler = GradScaler(enabled=False)
+                            break
+                        
+                        continue
+                    else:
+                        raise e
+                
+                # Dynamic loss selection based on curriculum phase
+                # Check if we have valid labels (not all -100)
+                valid_labels = (labels != IGNORE_INDEX).any()
+                
+                if current_phase == 0:  # Simple phase
+                    loss = outputs.loss
+                elif current_phase == 1:  # Medium phase
+                    if valid_labels:
                         loss = 0.7 * outputs.loss + 0.3 * label_smoothing_loss(outputs.logits, labels)
-                    elif current_phase == 2:  # Complex phase
+                    else:
+                        loss = outputs.loss  # Fallback to standard loss
+                elif current_phase == 2:  # Complex phase
+                    if valid_labels:
                         loss = 0.5 * outputs.loss + 0.3 * label_smoothing_loss(outputs.logits, labels) + 0.2 * focal_loss(outputs.logits, labels)
-                    else:  # Mixed phase
+                    else:
+                        loss = outputs.loss  # Fallback to standard loss
+                else:  # Mixed phase
+                    if valid_labels:
                         loss = 0.4 * outputs.loss + 0.3 * label_smoothing_loss(outputs.logits, labels) + 0.2 * focal_loss(outputs.logits, labels) + 0.1 * r_drop_loss(outputs.logits, outputs.logits, labels)
+                    else:
+                        loss = outputs.loss  # Fallback to standard loss
                 
-                # Backward pass
-                scaler.scale(loss).backward()
-                
-                # Gradient accumulation (every 4 batches)
-                if (batch_idx + 1) % 4 == 0:
-                    scaler.step(optimizer)
-                    scaler.update()
-                    optimizer.zero_grad()
-                    scheduler.step()
+                # Backward pass with mixed precision and error handling
+                try:
+                    scaler.scale(loss).backward()
+                    
+                    # Gradient accumulation (every 4 batches)
+                    if (batch_idx + 1) % 4 == 0:
+                        scaler.step(optimizer)
+                        scaler.update()
+                        optimizer.zero_grad()
+                        scheduler.step()
+                except RuntimeError as e:
+                    if "CUDA error" in str(e) or "device-side assert" in str(e):
+                        cuda_error_count += 1
+                        print(f"\n⚠️  CUDA error in backward pass (batch {batch_idx}): {e}")
+                        print(f"   CUDA errors so far: {cuda_error_count}/{max_cuda_errors}")
+                        
+                        # Clear gradients and continue
+                        optimizer.zero_grad()
+                        if torch.cuda.is_available():
+                            torch.cuda.empty_cache()
+                        
+                        # Switch to CPU if too many CUDA errors
+                        if cuda_error_count >= max_cuda_errors:
+                            print(f"\n🚨 Too many CUDA errors ({cuda_error_count}). Switching to CPU fallback...")
+                            device = torch.device("cpu")
+                            model = model.to(device)
+                            scaler = GradScaler(enabled=False)
+                            break
+                        
+                        continue
+                    else:
+                        raise e
                 
                 total_loss += loss.item()
                 train_progress.set_postfix({
@@ -625,12 +882,18 @@ def main():
                     'LR': f"{scheduler.get_last_lr()[0]:.2e}"
                 })
                 
+                # Periodic CUDA memory management
+                if batch_idx % 50 == 0 and device.type == "cuda":
+                    manage_cuda_memory()
+                
             except Exception as e:
                 print(f"\n⚠️  Error in training batch {batch_idx}: {e}")
                 continue
         
         avg_train_loss = total_loss / len(phase_dataloader)
         print(f"📊 Average training loss: {avg_train_loss:.4f}")
+        logger.info(f"train_loss={avg_train_loss:.6f}")
+        epoch_train_losses.append(float(avg_train_loss))
         
         # Validation
         model.eval()
@@ -646,11 +909,14 @@ def main():
                     if next(model.parameters()).device != device:
                         model.to(device)
                     
-                    outputs = model(
-                        input_ids=input_ids,
-                        attention_mask=attention_mask,
-                        labels=labels
-                    )
+                    # Use autocast for validation as well
+                    amp_ctx = autocast(device_type="cuda", dtype=torch.float16) if device.type == "cuda" else nullcontext()
+                    with amp_ctx:
+                        outputs = model(
+                            input_ids=input_ids,
+                            attention_mask=attention_mask,
+                            labels=labels
+                        )
                     
                     val_loss += outputs.loss.item()
                     
@@ -661,22 +927,35 @@ def main():
         avg_val_loss = val_loss / len(val_dataloader)
         print(f"Average validation loss: {avg_val_loss:.4f}")
         logger.info(f"val_loss={avg_val_loss:.6f}")
+        epoch_val_losses.append(float(avg_val_loss))
         
-        # BLEU score calculation (robust)
+        # BLEU score calculation on validation split with examples
         bleu_scores = []
-        sample_count = min(20, len(val_dataset))
+        max_eval = min(50, len(val_dataset))
+        # Resolve subset indices back to original df rows
+        try:
+            val_indices = list(getattr(val_dataset, 'indices', range(len(val_dataset))))
+        except Exception:
+            val_indices = list(range(len(val_dataset)))
         
-        for i in range(sample_count):
+        printed = 0
+        for j, subset_idx in enumerate(val_indices[:max_eval]):
             try:
-                if i >= len(df):
-                    break
-                src_text = str(df.iloc[i].get("src", "")).strip()
-                reference = str(df.iloc[i].get("tgt", "")).strip()
+                # Map to original row index in df
+                orig_idx = subset_idx
+                src_text = str(df.iloc[orig_idx].get("src", "")).strip()
+                reference = str(df.iloc[orig_idx].get("tgt", "")).strip()
                 if not src_text or not reference:
                     continue
                 translation = translate_text(src_text, model, tokenizer)
                 if not translation:
                     continue
+                if printed < 5:
+                    print(f"\n🔎 Val sample {printed+1}")
+                    print(f"SRC: {src_text}")
+                    print(f"REF: {reference}")
+                    print(f"HYP: {translation}")
+                    printed += 1
                 reference_tokens = reference.split()
                 translation_tokens = translation.split()
                 if not reference_tokens or not translation_tokens:
@@ -684,12 +963,13 @@ def main():
                 bleu = sentence_bleu([reference_tokens], translation_tokens, smoothing_function=SmoothingFunction().method1)
                 bleu_scores.append(bleu)
             except Exception as e:
-                print(f"BLEU calculation error for sample {i}: {e}")
+                print(f"BLEU calculation error for val sample {j}: {e}")
                 continue
         
-        avg_bleu = np.mean(bleu_scores) if bleu_scores else 0.0
+        avg_bleu = float(np.mean(bleu_scores)) if bleu_scores else 0.0
         print(f"Average BLEU score: {avg_bleu:.4f}")
         logger.info(f"bleu={avg_bleu:.6f}")
+        epoch_bleus.append(float(avg_bleu))
         
         # Early stopping check
         if avg_val_loss < best_val_loss:
@@ -753,9 +1033,63 @@ def main():
     print(f"Model saved to: fine-tuned-mbart-tl2en/")
     logger.info(f"final_val_loss={avg_val_loss:.6f}")
     logger.info(f"final_bleu={avg_bleu:.6f}")
+
+    # Log final averages over all completed epochs
+    try:
+        if epoch_train_losses:
+            logger.info(f"final_avg_train_loss={float(np.mean(epoch_train_losses)):.6f}")
+        if epoch_val_losses:
+            logger.info(f"final_avg_val_loss={float(np.mean(epoch_val_losses)):.6f}")
+        if epoch_bleus:
+            logger.info(f"final_avg_bleu={float(np.mean(epoch_bleus)):.6f}")
+    except Exception:
+        pass
     
     # Test translation
     print("\n🧪 Testing translation...")
+    
+    # First, test if model can generate anything at all
+    print("🔍 Testing basic model generation...")
+    try:
+        # Simple forward pass test
+        test_input = torch.randint(0, tokenizer.vocab_size, (1, 5)).to(device)
+        with torch.no_grad():
+            test_output = model(input_ids=test_input)
+        print(f"✅ Model forward pass works. Output shape: {test_output.logits.shape}")
+    except Exception as e:
+        print(f"❌ Model forward pass failed: {e}")
+        return
+    
+    # Validate language token IDs
+    print("🔍 Validating language token IDs...")
+    try:
+        # Check if the language codes exist in the tokenizer
+        filipino_id = tokenizer.lang_code_to_id.get('tl_XX')
+        english_id = tokenizer.lang_code_to_id.get('en_XX')
+        
+        if filipino_id is not None:
+            print(f"✅ Filipino (tl_XX) token ID: {filipino_id}")
+        else:
+            print("⚠️  Filipino (tl_XX) not found in tokenizer")
+            
+        if english_id is not None:
+            print(f"✅ English (en_XX) token ID: {english_id}")
+        else:
+            print("⚠️  English (en_XX) not found in tokenizer")
+            
+        # Test tokenization of language codes
+        if filipino_id is not None:
+            filipino_tokens = tokenizer.encode('tl_XX', add_special_tokens=False)
+            print(f"✅ Filipino language code tokenization: {filipino_tokens}")
+            
+        if english_id is not None:
+            english_tokens = tokenizer.encode('en_XX', add_special_tokens=False)
+            print(f"✅ English language code tokenization: {english_tokens}")
+            
+    except Exception as e:
+        print(f"⚠️  Language validation error: {e}")
+    
+    # Test actual translations
     test_texts = [
         "Kamusta ka?",
         "Salamat sa tulong mo.",
@@ -764,12 +1098,18 @@ def main():
     
     for text in test_texts:
         try:
+            print(f"\n🔍 Testing: '{text}'")
             translation = translate_text(text, model, tokenizer)
             print(f"🇵🇭 {text}")
             print(f"🇺🇸 {translation}")
+            if not translation.strip():
+                print("⚠️  Warning: Empty translation generated")
             print()
         except Exception as e:
             print(f"⚠️  Translation error for '{text}': {e}")
+            print(f"   Error type: {type(e).__name__}")
+            import traceback
+            traceback.print_exc()
 
 if __name__ == "__main__":
     main()

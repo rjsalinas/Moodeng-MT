@@ -1,10 +1,13 @@
-# 🔄 Filipino Tweet Preprocessing Pipeline Documentation
+# 🔄 Filipino Tweet Preprocessing & Translation Data Enhancement Pipeline
 
 ## 📋 Overview
 
-This document provides a comprehensive guide to the complete preprocessing pipeline that transforms raw Filipino/Taglish tweets into the normalized `tweets_id_filipino_text_normalized.csv` file.
+This document describes two related pipelines:
 
-## 🗂️ Pipeline Overview
+1) The tweet‑centric normalization pipeline that yields `tweets_id_filipino_text_normalized.csv` for analysis
+2) The CalamanCy‑enhanced parallel‑corpus pipeline used for mBART fine‑tuning, producing `full_enhanced_parallel_corpus.csv`
+
+## 🗂️ Pipeline Overview (Tweets → Normalized CSV)
 
 ```
 Raw JSON Datasets → CSV Extraction → Text Normalization → Language Filtering → Final Output
@@ -12,15 +15,34 @@ Raw JSON Datasets → CSV Extraction → Text Normalization → Language Filteri
 dataset_*.json    tweets_id_text_only.csv  normalized.csv   filtered.csv   tweets_id_filipino_text_normalized.csv
 ```
 
-## 📊 Final Output File
+---
 
-**File**: `tweets_id_filipino_text_normalized.csv`
-**Structure**: 
-- `id`: Tweet identifier
-- `text`: Original tweet text
-- `preprocessed_text`: Normalized and cleaned Filipino text
+## 🗂️ Pipeline Overview (Parallel Corpus → Enhanced Corpus)
 
-## 🚀 Stage 1: JSON Dataset Extraction
+```
+filipino_english_parallel_corpus.csv → CalamanCy‑enhanced preprocessing (batched) → full_enhanced_parallel_corpus.csv
+```
+
+Key stages in the enhanced path:
+- Column normalization to `src`/`tgt`
+- Tagalog‑aware tokenization and sentence boundary detection
+- Social‑media and orthographic normalization (Filipino‑specific)
+- Optional light augmentation; complexity and quality indicators
+- Consolidation into a single enhanced CSV for training
+
+## 📊 Final Output Files
+
+- `tweets_id_filipino_text_normalized.csv`
+  - `id`: Tweet identifier
+  - `text`: Original tweet text
+  - `preprocessed_text`: Normalized Filipino text
+
+Key properties of normalization:
+- English text is preserved when present in mixed Taglish content
+- Original terminal punctuation (?, !) is preserved; repeated marks are reduced
+- A period is added only when no end punctuation exists
+
+## 🚀 Stage 1: JSON Dataset Extraction (Tweets path)
 
 ### **Script**: `extract_tweet_data.py`
 
@@ -55,7 +77,7 @@ def extract_tweet_data(json_file_path, csv_output_path):
 
 ---
 
-## 🔧 Stage 2: Comprehensive Text Normalization
+## 🔧 Stage 2: Comprehensive Text Normalization (Tweets path)
 
 ### **Script**: `normalize_csv_tweets.py`
 
@@ -255,7 +277,7 @@ def _apply_social_media_cleaning(self, text, context):
 
 ---
 
-## 🌍 Stage 3: Language Detection and Filtering
+## 🌍 Stage 3: Language Detection and Filtering (Tweets path)
 
 ### **Script**: `remove_spanish_from_filipino.py`
 
@@ -490,7 +512,7 @@ def filter_filipino_tweets(input_csv, output_filipino_csv, output_non_filipino_c
 
 ---
 
-## 📊 Stage 4: Final Dataset Creation
+## 📊 Stage 4: Final Dataset Creation (Tweets path)
 
 ### **Final Processing Script**
 
@@ -547,7 +569,7 @@ def create_final_dataset(input_csv, output_csv):
 
 ---
 
-## 🔄 Complete Pipeline Execution
+## 🔄 Complete Pipeline Execution (Tweets path)
 
 ### **Step-by-Step Execution**
 
@@ -564,6 +586,45 @@ python remove_spanish_from_filipino.py
 # 4. Create final dataset
 python create_final_dataset.py
 ```
+
+---
+
+## ⚙️ CalamanCy‑Enhanced Parallel Corpus Pipeline (for mBART)
+
+### Script: `batch_process_calamancy.py`
+
+Command:
+```bash
+python batch_process_calamancy.py
+```
+
+Inputs/assumptions:
+- Source file: `filipino_english_parallel_corpus.csv`
+- Columns: `text` + `english_translation` or `src` + `tgt`
+
+What it does:
+- Initializes CalamanCy and applies Filipino‑aware tokenization and sentence boundary detection
+- Normalizes social‑media artifacts, preserves English where appropriate, and handles Tagalog morphology
+- Computes complexity/quality indicators; supports optional light augmentation
+- Processes in batches for stability and progress visibility; optionally saves `enhanced_batch_XXX.csv`
+
+Primary output:
+- `full_enhanced_parallel_corpus.csv` with base columns `src`/`tgt` and optional `src_enhanced`/`tgt_enhanced` used by training
+
+Recommended sequence for training:
+```bash
+# 1) Enhance the corpus
+python batch_process_calamancy.py
+
+# 2) Train with the enhanced dataset
+python model_training_enhanced.py
+
+# 3) Run inference using the best adapter
+python translate_with_model.py --text "kamusta ka?"
+```
+
+Notes:
+- If `full_enhanced_parallel_corpus.csv` is absent, the training script can enhance on the fly, but explicit preprocessing is faster and reproducible.
 
 ### **Pipeline Flow Diagram**
 

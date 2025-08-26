@@ -1,199 +1,81 @@
-# 🇵🇭 Filipino-to-English Translation Model Fine-tuning
+# 🇵🇭 Filipino→English Translation: Training and Inference
 
-This directory contains the converted Python script from `test1.ipynb` for fine-tuning an mBART-50 model for Filipino-to-English translation.
+This guide documents the current training and inference workflow for the mBART‑50 + LoRA pipeline used in this project. It supersedes earlier notebook‑converted examples and aligns with `model_training_enhanced.py` and `translate_with_model.py`.
 
-## 📁 Files
+## 📁 Relevant Files
 
-- **`test1.py`** - Main fine-tuning script (converted from Jupyter notebook)
-- **`requirements_translation.txt`** - Required Python dependencies
-- **`README_TRANSLATION.md`** - This documentation file
+- `model_training_enhanced.py` – Primary training script (prefers enhanced corpus)
+- `model_training.py` – Baseline training (no CalamanCy enhancements)
+- `translate_with_model.py` – Inference/translation CLI using best adapter
+- `requirements_translation.txt` – Dependencies for training/inference
 
 ## 🚀 Quick Start
 
-### 1. Install Dependencies
+### 1) Install dependencies
 ```bash
 pip install -r requirements_translation.txt
 ```
 
-### 2. Run the Script
+### 2) Prepare data (recommended)
+Generate the enhanced parallel corpus once:
 ```bash
-python test1.py
+python batch_process_calamancy.py
+```
+This creates `full_enhanced_parallel_corpus.csv` with columns `src`, `tgt`, and optionally `src_enhanced`/`tgt_enhanced`.
+
+### 3) Train
+Preferred (uses the enhanced CSV if available):
+```bash
+python model_training_enhanced.py
+```
+Baseline (no enhanced preprocessing):
+```bash
+python model_training.py
 ```
 
-## 🔧 What the Script Does
+Artifacts:
+- `fine-tuned-mbart-tl2en/` – checkpoints during training
+- `fine-tuned-mbart-tl2en-best/` – best adapter and configs (used by inference)
 
-### **Training Pipeline**
-1. **Data Loading**: Loads Filipino-English translation pairs from CSV or creates sample data
-2. **Model Setup**: Initializes mBART-50 with LoRA (Low-Rank Adaptation) for efficient training
-3. **Training Loop**: Runs 5 epochs with mixed precision training
-4. **Model Saving**: Saves the fine-tuned model to `fine-tuned-mbart-tl2en/`
+### 4) Inference
+Translate Filipino text using the best adapter:
+```bash
+python translate_with_model.py --text "kamusta ka?"
+```
+Or translate a CSV column:
+```bash
+python translate_with_model.py --input_csv filipino_english_parallel_corpus.csv \
+  --src_col src --out_csv english_translation_from_preprocessed_texts.csv
+```
 
-### **Inference Testing**
-- Tests the trained model on sample Filipino sentences
-- Shows translation quality and results
+## 📊 Dataset Formats
 
-## 📊 Dataset Format
+- Enhanced: `full_enhanced_parallel_corpus.csv` with `src`, `tgt` (+ optional `src_enhanced`, `tgt_enhanced`)
+- Fallback: `filipino_english_parallel_corpus.csv` with `src`/`tgt` or `text`/`english_translation`
 
-The script expects a CSV file named `test.csv` with two columns:
-- **`src`**: Filipino text (source language)
-- **`tgt`**: English text (target language)
-
-**Example:**
+Example:
 ```csv
 src,tgt
 "Kamusta ka?","How are you?"
 "Salamat sa tulong mo.","Thank you for your help."
-"Magandang umaga.","Good morning."
 ```
 
-## 🎯 Key Features
+## ⚙️ Key Training Details (summary)
 
-### **LoRA Configuration**
-- **Rank (r)**: 8 (low-rank adaptation)
-- **Alpha**: 32 (scaling factor)
-- **Target Modules**: q_proj, v_proj (query and value projections)
-- **Dropout**: 0.1
-- **Memory Efficient**: Only ~1% of parameters are trainable
+- Base: `facebook/mbart-large-50-many-to-many-mmt`
+- Tokenizer: `MBart50Tokenizer` with `src_lang=tl_XX`, `tgt_lang=en_XX`
+- PEFT: LoRA on attention/FFN; mixed precision when CUDA is available
+- Curriculum: optional complexity‑aware scheduling when enhanced features exist
+- Selection: best adapter saved to `fine-tuned-mbart-tl2en-best/`
 
-### **Training Parameters**
-- **Learning Rate**: 2e-4
-- **Batch Size**: 4
-- **Epochs**: 5
-- **Max Length**: 128 tokens
-- **Mixed Precision**: Enabled for faster training
+## 🧪 Troubleshooting
 
-### **Device Support**
-- **CUDA**: Automatic detection and usage
-- **CPU**: Fallback support (slower but functional)
+- CUDA OOM: reduce batch size or max length; use gradient accumulation
+- Missing enhanced CSV: run `batch_process_calamancy.py` first, or rely on fallback in training script
+- Windows tokenizer threads: set `TOKENIZERS_PARALLELISM=true` if needed
 
-## 🔍 Sample Output
+## 📚 See also
 
-```
-🚀 Starting Filipino-to-English Translation Model Fine-tuning
-============================================================
-📱 Using device: cuda
-📚 Loading tokenizer...
-✅ Tokenizer loaded successfully
-📊 Loading dataset...
-✅ Dataset loaded: 5 samples
-📝 Sample data:
-                src                    tgt
-0        Kamusta ka?            How are you?
-1  Salamat sa tulong mo.  Thank you for your help.
-2      Magandang umaga.           Good morning.
-3         Paalam na.                Goodbye.
-4    Gusto ko ng kape.         I want coffee.
-
-🔥 Starting training...
-Epoch 1/5: 100%|██████████| 2/2 [00:05<00:00,  2.50s/it, loss=9.234]
-📈 Epoch 1 completed - Average Loss: 9.234
-...
-
-🔍 INFERENCE TESTING
-============================================================
-📘 Translation Results:
-----------------------------------------
-1. TL: Hindi ko makita ang susi ko.
-   EN: I can't find my key.
-
-2. TL: Ang daming trabaho ngayon.
-   EN: There's so much work today.
-```
-
-## ⚠️ Important Notes
-
-### **Hardware Requirements**
-- **GPU**: Recommended for reasonable training speed
-- **RAM**: At least 8GB (16GB+ recommended)
-- **Storage**: ~2GB for model and dependencies
-
-### **Dataset Requirements**
-- **Minimum**: 5-10 sample pairs for testing
-- **Recommended**: 100+ pairs for meaningful training
-- **Quality**: Clean, parallel Filipino-English text
-
-### **Model Output**
-- **Directory**: `fine-tuned-mbart-tl2en/`
-- **Contents**: Model weights, configuration, and tokenizer
-- **Size**: ~4.5MB (LoRA adapters only)
-
-## 🛠️ Customization
-
-### **Modify Training Parameters**
-```python
-# In test1.py, adjust these values:
-lora_config = LoraConfig(
-    r=16,           # Increase rank for more capacity
-    lora_alpha=64,  # Adjust scaling
-    lora_dropout=0.2,  # Change dropout
-    # ...
-)
-
-# Training parameters
-for epoch in range(10):  # More epochs
-    # ...
-```
-
-### **Add Custom Dataset**
-1. Create `test.csv` with your Filipino-English pairs
-2. Ensure proper CSV format (src, tgt columns)
-3. Run the script
-
-### **Modify Test Sentences**
-```python
-test_sentences = [
-    "Your Filipino text here",
-    "Another sentence",
-    # Add more test cases
-]
-```
-
-## 🚨 Troubleshooting
-
-### **Common Issues**
-
-1. **CUDA Out of Memory**
-   - Reduce batch size (change `batch_size=2`)
-   - Reduce max length (change `max_len=64`)
-
-2. **Import Errors**
-   - Install requirements: `pip install -r requirements_translation.txt`
-   - Check PyTorch version compatibility
-
-3. **Poor Translation Quality**
-   - Increase training epochs
-   - Improve dataset quality
-   - Adjust LoRA parameters
-
-4. **Slow Training on CPU**
-   - This is expected - consider using GPU
-   - Reduce dataset size for testing
-
-## 📚 Technical Details
-
-### **Model Architecture**
-- **Base Model**: facebook/mbart-large-50-many-to-many-mmt
-- **Parameters**: ~610M total, ~6M trainable (LoRA)
-- **Languages**: 50+ languages including Filipino (tl_XX)
-
-### **LoRA Benefits**
-- **Memory Efficient**: Only train small adapter layers
-- **Fast Training**: Reduced parameter count
-- **Easy Deployment**: Small model size
-- **Maintains Quality**: Preserves base model capabilities
-
-## 🤝 Contributing
-
-To improve the translation model:
-1. **Better Dataset**: Add more Filipino-English pairs
-2. **Hyperparameter Tuning**: Experiment with LoRA settings
-3. **Data Augmentation**: Create variations of existing pairs
-4. **Evaluation Metrics**: Add BLEU, ROUGE, or other metrics
-
-## 📄 License
-
-This script is for research and educational purposes. The mBART model is subject to Facebook's license terms.
-
----
-
-**🎯 Ready to train your Filipino-to-English translation model!** 🎯
+- `PREPROCESSING_PIPELINE.md` – End‑to‑end preprocessing and filtering
+- `MODEL_TRAINING.md` – Full objectives, losses, schedules, and metrics
+- `README_CALAMANCY_INTEGRATION.md` – Details of CalamanCy‑based enhancements

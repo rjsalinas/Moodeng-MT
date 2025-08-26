@@ -94,7 +94,7 @@ df = df.rename(columns={
     "english_translation": "tgt"
 })
 
-# Apply CalamanCy enhancements
+# Apply CalamanCy enhancements (adds complexity/quality; preserves English; Tagalog‑aware)
 enhanced_df = enhance_filipino_dataset(df)
 
 print(f"Original: {len(df)} samples")
@@ -162,12 +162,17 @@ else:
     print("⚠️  Using basic preprocessing")
 ```
 
-## 📊 Performance Comparison
+## 📊 Output and Performance
+
+### Output columns
+- Base: `src`, `tgt`
+- Enhanced (optional): `src_enhanced`, `tgt_enhanced`
+- Metadata: `complexity_score`, `quality_score`, `tagalog_complexity`, `is_augmented`, `uses_calamancy`
 
 ### **Data Quality Metrics**
 
 | Metric | Basic Preprocessing | CalamanCy Enhanced |
-|--------|-------------------|-------------------|
+|--------|---------------------|--------------------|
 | **Complexity Scoring** | Word count + punctuation | Linguistic + structural |
 | **Data Augmentation** | Synonym replacement | Morphological variations |
 | **Quality Validation** | Length + similarity | Grammar + entities |
