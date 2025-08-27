@@ -1,0 +1,15 @@
+{
+  "hace": {"to": "have", "source":"user_list", "confidence": 0.95},
+  "peraan": {"to": "perahan", "source":"user_list", "confidence": 0.6},
+  "grammnys": {"to": "grammys", "source":"user_list", "confidence": 0.9},
+  "charrr": {"to": "char", "source":"user_list", "confidence": 0.95},
+  "akoooo": {"to": "ako", "source":"user_list", "confidence": 0.95},
+  "gaanobg": {"to": "gaanong", "source":"user_list", "confidence": 0.8},
+  "kibagat": {"to": "kabigat", "source":"user_list", "confidence": 0.6}
+}
+
+
+
+
+
+

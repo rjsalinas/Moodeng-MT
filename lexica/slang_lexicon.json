@@ -1,0 +1,27 @@
+{
+  "tas": {"to": "tapos", "source":"user_list", "confidence": 0.95},
+  "gg": {"to": "good game", "source":"user_list", "confidence": 0.9},
+  "oa": {"to": "overacting", "source":"user_list", "confidence": 0.6},
+  "te": {"to": "te (addressing)", "source":"user_list", "confidence": 0.6},
+  "mwuaps": {"to": "mwuaps (term)", "source":"user_list", "confidence": 0.6},
+  "yawa": {"to": "yawa", "source":"user_list", "confidence": 0.6},
+  "getz": {"to": "gets", "source":"user_list", "confidence": 0.95},
+  "hakdog": {"to": "hatdog", "source":"user_list", "confidence": 0.9},
+  "bhie": {"to": "bhie", "source":"user_list", "confidence": 0.85},
+  "atm": {"to": "at the moment", "source":"user_list", "confidence": 0.95},
+  "wth": {"to": "what the hell", "source":"user_list", "confidence": 0.9},
+  "haist": {"to": "sigh", "source":"user_list", "confidence": 0.85},
+  "irl": {"to": "in real life", "source":"user_list", "confidence": 0.95},
+  "cla": {"to": "sila", "source":"user_list", "confidence": 0.8},
+  "beki": {"to": "beki", "source":"user_list", "confidence": 0.6},
+  "beke": {"to": "baka", "source":"user_list", "confidence": 0.6},
+  "nemen": {"to": "naman", "source":"user_list", "confidence": 0.8},
+  "beks": {"to": "beks", "source":"user_list", "confidence": 0.7},
+  "shurikats": {"to": "shurikat (slang)", "source":"user_list", "confidence": 0.5}
+}
+
+
+
+
+
+

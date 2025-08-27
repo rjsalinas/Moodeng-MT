@@ -12,9 +12,10 @@ class FilipinoNormalizer:
         # Load once
         with open(registry_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        # Active rules sorted by priority (high first)
+        # Active rules sorted by priority (high first) with safe defaults
+        raw_rules = [r for r in data.get('rules', []) if r.get('active', True)]
         self.rules = sorted(
-            [r for r in data.get('rules', []) if r.get('active', True)],
+            [self._augment_rule_defaults(r) for r in raw_rules],
             key=lambda x: x.get('priority', 0),
             reverse=True
         )
@@ -83,6 +84,10 @@ class FilipinoNormalizer:
             elif "CVCV CVCV→CVCV-CVCV" in pattern:
                 normalized_text, logs = self._apply_reduplication_rule(normalized_text, rule, context)
                 applied_logs.extend(logs)
+            else:
+                # New: apply generic high-confidence regex-based rules (e.g., ORTH_### from rules.json)
+                normalized_text, logs = self._apply_generic_regex_rule(normalized_text, rule, context)
+                applied_logs.extend(logs)
 
         # Apply enhanced normalization rules (NEW)
         normalized_text, logs = self._apply_transposition_rules(normalized_text, context)
@@ -117,6 +122,67 @@ class FilipinoNormalizer:
             self._log_sentence(original=text, normalized=normalized_text, applied_logs=applied_logs, context=context)
 
         return normalized_text, applied_logs
+
+    def _augment_rule_defaults(self, rule):
+        """Ensure new schema fields exist with safe defaults so older code doesn't break."""
+        r = dict(rule)
+        r.setdefault('legacy_ids', [])
+        r.setdefault('confidence_default', 0.75)
+        r.setdefault('variation_index', 'medium')
+        r.setdefault('priority', 50)
+        r.setdefault('preconditions', [])
+        r.setdefault('scope', 'token')
+        r.setdefault('deprecated', False)
+        r.setdefault('active', True)
+        return r
+
+    def _apply_generic_regex_rule(self, text, rule, context):
+        """
+        Conservative, generic handler for regex-style rules in rules.json (e.g., ORTH_###).
+        - Applies only if confidence_default >= 0.9
+        - Skips rules that reference external lexica: pattern startswith 'lexicon:'
+        - Uses canonical_choice as replacement if provided; otherwise no-op
+        - Does not attempt to evaluate complex preconditions here
+        """
+        logs = []
+        try:
+            # Respect confidence threshold (conservative)
+            if rule.get('confidence_default', 0.0) < 0.9:
+                return text, logs
+
+            pat = rule.get('pattern')
+            if not isinstance(pat, str) or not pat:
+                return text, logs
+
+            if pat.startswith('lexicon:'):
+                # This normalizer doesn't load merged lexica. Skip.
+                return text, logs
+
+            replacement = rule.get('canonical_choice')
+            if replacement is None:
+                return text, logs
+
+            regex = re.compile(pat, flags=re.IGNORECASE)
+            new_text, n = regex.subn(replacement, text)
+            if n > 0 and new_text != text:
+                logs.append(self._mk_edit_log(
+                    rule_id=rule.get('rule_id', 'ORTH_GENERIC'),
+                    reason='generic_regex_rule',
+                    before=text,
+                    after=new_text,
+                    span=None,
+                    context=context,
+                    meta={
+                        'pattern': pat,
+                        'replacement': replacement,
+                        'confidence_default': rule.get('confidence_default')
+                    }
+                ))
+                return new_text, logs
+            return text, logs
+        except re.error:
+            # Invalid regex: ignore silently
+            return text, logs
 
     def _apply_text_cleaning_rules(self, text, context):
         """Apply basic text cleaning rules"""

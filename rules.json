@@ -1,352 +1,265 @@
 {
+  "metadata": {
     "version": "1.0",
-    "updated": "2025-08-16",
-    "description": "Filipino/Taglish orthographic normalization rules based on Comparative Analysis paper",
-    "source_paper": "Comparative analysis of actual language usage and selected grammar and orthographical rules for Filipino, Cebuano-Visayan and Ilokano",
-    "rules": [
-      {
-        "rule_id": "SUB_DASH_01",
-        "op_type": "substitution",
-        "family": "dash_normalization",
-        "paper_rule": "RULE-27 DASH vs NODASH",
-        "ortho_label": "ORTHO.DASH",
-        "description": "Normalize to hyphen for reduplication and affix boundaries",
-        "pattern": "space→hyphen at morpheme boundaries",
-        "direction": "space→hyphen",
-        "scope": "substr",
-        "canonical_choice": "hyphen",
-        "rationale": "Improves readability for reduplication (araw-araw) and affix boundaries (mag-aral)",
-        "preconditions": [
-          "is_reduplication OR is_affix_boundary",
-          "not_inside_simple_root"
-        ],
-        "examples": [
-          {"before": "araw araw", "after": "araw-araw", "context": "reduplication"},
-          {"before": "mag aral", "after": "mag-aral", "context": "affix boundary"}
-        ],
-        "confidence_default": 0.98,
-        "variation_index": "high",
-        "deprecated": false,
-        "notes": "Highest frequency rule from paper. Remove spurious hyphens inside simple roots."
+    "created_date": "2025-08-25",
+    "description": "Combined ORTH ruleset for Filipino orthographic normalization."
+  },
+  "rules": [
+    {
+      "rule_id": "ORTH_001",
+      "legacy_ids": ["SUB_OU_01"],
+      "op_type": "substitution",
+      "family": "vowel_substitution",
+      "paper_rule": "RULE-2 o vs u",
+      "description": "Normalize o↔u alternation per modern Filipino usage",
+      "pattern": "(?<=\\w)([ou])(?=\\w)",
+      "direction": {
+        "type": "context_dependent",
+        "policy": [
+          {"condition": "syllable_open == true", "target": "o"},
+          {"condition": "is_loanword AND closed_syllable", "target": "u"},
+          {"condition": "proper_name", "target": "preserve"}
+        ]
       },
-      {
-        "rule_id": "SUB_OU_01", 
-        "op_type": "substitution",
-        "family": "orthography_variant",
-        "paper_rule": "RULE-2 o vs u",
-        "ortho_label": "ORTHO.O_U",
-        "description": "Normalize o↔u alternation per modern Filipino usage",
-        "pattern": "o↔u",
-        "direction": "context_dependent",
-        "scope": "char",
-        "canonical_choice": "prefer o in open syllables, u where 2001 Revisyon shows stable usage",
-        "rationale": "Second highest frequency rule. Favor o in open syllables, u in closed/loans",
-        "preconditions": [
-          "lang in [fil, tag]",
-          "not_proper_name"
-        ],
-        "examples": [
-          {"before": "kumusta", "after": "kamusta", "context": "common greeting"},
-          {"before": "baso", "after": "baso", "context": "Filipinized loan, keep o"}
-        ],
-        "confidence_default": 0.95,
-        "variation_index": "high",
-        "deprecated": false,
-        "notes": "For loans with v/b alternation, prefer Filipinized b (baso) unless code-switching"
-      },
-      {
-        "rule_id": "SUB_IE_01",
-        "op_type": "substitution", 
-        "family": "orthography_variant",
-        "paper_rule": "RULE-1 i vs e",
-        "ortho_label": "ORTHO.I_E",
-        "description": "Normalize i↔e alternation per modern dictionary forms",
-        "pattern": "i↔e",
-        "direction": "prefer_dictionary_form",
-        "scope": "char",
-        "canonical_choice": "modern Filipino dictionary forms",
-        "rationale": "Third highest frequency. Follow mainstream dictionary usage",
-        "preconditions": [
-          "lang in [fil, tag]"
-        ],
-        "examples": [
-          {"before": "hangaren", "after": "hangarin", "context": "dictionary form"},
-          {"before": "tange", "after": "tangi", "context": "not slang form"}
-        ],
-        "confidence_default": 0.9,
-        "variation_index": "high",
-        "deprecated": false,
-        "notes": "Prefer modern dictionary Filipino forms unless clearly slang context"
-      },
-      {
-        "rule_id": "SUB_YI_01",
-        "op_type": "substitution",
-        "family": "orthography_variant", 
-        "paper_rule": "RULE-5 y vs i",
-        "ortho_label": "ORTHO.Y_I",
-        "description": "Normalize y↔i alternation per standard forms",
-        "pattern": "y↔i",
-        "direction": "prefer_standard",
-        "scope": "char",
-        "canonical_choice": "standard dictionary forms",
-        "rationale": "High variation index, standardize to reduce entropy",
-        "preconditions": [
-          "lang in [fil, tag]"
-        ],
-        "examples": [
-          {"before": "kolehiala", "after": "kolehiyala", "context": "standard form"},
-          {"before": "siya", "after": "siya", "context": "keep standard pronoun"}
-        ],
-        "confidence_default": 0.92,
-        "variation_index": "high", 
-        "deprecated": false,
-        "notes": "Where paper shows clear majority, pick that form"
-      },
-      {
-        "rule_id": "SUB_NG_N_01",
-        "op_type": "substitution",
-        "family": "orthography_variant",
-        "paper_rule": "RULE-X ng vs n",
-        "ortho_label": "ORTHO.NG_N", 
-        "description": "Write ng for velar nasal, disambiguate n+g across morphemes",
-        "pattern": "ng vs n+g",
-        "direction": "ng_for_velar_nasal",
-        "scope": "substr",
-        "canonical_choice": "ng for velar nasal phoneme",
-        "rationale": "Phonological accuracy and morpheme boundary clarity",
-        "preconditions": [
-          "is_velar_nasal OR morpheme_boundary"
-        ],
-        "examples": [
-          {"before": "pan-gitna", "after": "panggitna", "context": "mainstream style"},
-          {"before": "pangangalaga", "after": "pangangalaga", "context": "keep ng"}
-        ],
-        "confidence_default": 0.94,
-        "variation_index": "medium",
-        "deprecated": false,
-        "notes": "Follow mainstream style: panggitna over pan-gitna"
-      },
-      {
-        "rule_id": "SUB_CH_TS_01",
-        "op_type": "substitution",
-        "family": "orthography_variant",
-        "paper_rule": "RULE-X ch vs ts", 
-        "ortho_label": "ORTHO.CH_TS",
-        "description": "Prefer ts for Filipinized forms, ch for proper names",
-        "pattern": "ch↔ts",
-        "direction": "ts_for_filipinized",
-        "scope": "substr",
-        "canonical_choice": "ts for native/Filipinized, ch for proper names",
-        "rationale": "High V.I., clear Filipinization pattern",
-        "preconditions": [
-          "not_proper_name OR not_foreign_context"
-        ],
-        "examples": [
-          {"before": "chocolate", "after": "tsokolate", "context": "Filipinized form"},
-          {"before": "Charles", "after": "Charles", "context": "proper name, keep ch"}
-        ],
-        "confidence_default": 0.93,
-        "variation_index": "high",
-        "deprecated": false,
-        "notes": "Very high V.I. means forms highly interchangeable, enforce canonical"
-      },
-      {
-        "rule_id": "SUB_UW_W_01",
-        "op_type": "substitution",
-        "family": "orthography_variant",
-        "paper_rule": "RULE-X uw vs w",
-        "ortho_label": "ORTHO.UW_W",
-        "description": "Prefer w for native sequences unless phonologically needed",
-        "pattern": "uw↔w", 
-        "direction": "prefer_w",
-        "scope": "substr",
-        "canonical_choice": "w for native sequences",
-        "rationale": "High V.I., simplify unless phonological distinction needed",
-        "preconditions": [
-          "not_phonological_distinction_needed"
-        ],
-        "examples": [
-          {"before": "buwaya", "after": "bwaya", "context": "native sequence"},
-          {"before": "uwi", "after": "uwi", "context": "phonological distinction"}
-        ],
-        "confidence_default": 0.88,
-        "variation_index": "high",
-        "deprecated": false,
-        "notes": "Rare cases where uw distinction phonologically needed in Filipino"
-      },
-      {
-        "rule_id": "DEL_H_01",
-        "op_type": "deletion",
-        "family": "orthography_variant",
-        "paper_rule": "RULE-3 Presence/absence of -h-",
-        "ortho_label": "ORTHO.H_PRESENCE",
-        "description": "Remove extraneous h inside words per orthography",
-        "pattern": "redundant_h",
-        "scope": "char",
-        "canonical_choice": "remove_redundant_h",
-        "rationale": "High frequency rule, standardize h usage",
-        "preconditions": [
-          "not_etymological_h",
-          "not_proper_name"
-        ],
-        "examples": [
-          {"before": "mahhalaga", "after": "mahalaga", "context": "duplicate h"},
-          {"before": "tahanan", "after": "tahanan", "context": "keep etymological h"}
-        ],
-        "confidence_default": 0.96,
-        "variation_index": "high",
-        "deprecated": false,
-        "notes": "Keep etymological h, remove typing duplicates"
-      },
-      {
-        "rule_id": "DEL_DUPCHAR_01",
-        "op_type": "deletion",
-        "family": "duplicate_letter",
-        "paper_rule": "GENERAL duplicate characters",
-        "ortho_label": "ORTHO.GEMINATION",
-        "description": "Remove unintended duplicate characters from typos",
-        "pattern": "(.)\\1+",
-        "scope": "char",
-        "canonical_choice": "single_character",
-        "rationale": "Clear typos, not morphological gemination",
-        "preconditions": [
-          "not_morphological_gemination",
-          "not_emphasis_lengthening"
-        ],
-        "examples": [
-          {"before": "helllo", "after": "hello", "context": "typo"},
-          {"before": "sigeee", "after": "sige", "context": "emphasis, normalize"}
-        ],
-        "confidence_default": 0.99,
-        "variation_index": "low",
-        "deprecated": false,
-        "notes": "Preserve in Orig, normalize in Norm, tag as EMPHASIS if intentional"
-      },
-      {
-        "rule_id": "SUB_SLANG_01",
-        "op_type": "substitution",
-        "family": "slang_normalization",
-        "paper_rule": "GENERAL slang/clipped forms",
-        "ortho_label": "ORTHO.SLANG",
-        "description": "Normalize common chat shortcuts to standard forms",
-        "pattern": "shortcut→standard",
-        "scope": "token",
-        "canonical_choice": "standard_form",
-        "rationale": "Reduce sparsity, formal register consistency",
-        "preconditions": [
-          "context_supports_expansion",
-          "not_ambiguous"
-        ],
-        "examples": [
-          {"before": "q", "after": "ako", "context": "Filipino context"},
-          {"before": "u", "after": "ikaw", "context": "Filipino context"},
-          {"before": "syempre", "after": "syempre", "context": "canonical slang form"}
-        ],
-        "confidence_default": 0.85,
-        "variation_index": "medium",
-        "deprecated": false,
-        "notes": "Context-sensitive. 'sya' → 'siya' per stance"
-      },
-      {
-        "rule_id": "SUB_LOAN_FIL_01",
-        "op_type": "substitution", 
-        "family": "loan_normalization",
-        "paper_rule": "GENERAL loanword policy",
-        "ortho_label": "ORTHO.LOAN.PREFERRED",
-        "description": "Default to Filipinized forms for common vocabulary",
-        "pattern": "foreign→filipinized",
-        "scope": "token",
-        "canonical_choice": "filipinized_common_vocab",
-        "rationale": "2001 Revisyon policy, reduce code-switch noise",
-        "preconditions": [
-          "not_proper_noun",
-          "not_institutional_name", 
-          "not_direct_quotation",
-          "not_ui_label",
-          "not_clear_english_codeswitching"
-        ],
-        "examples": [
-          {"before": "favorite", "after": "paborito", "context": "common vocab"},
-          {"before": "window", "after": "bintana", "context": "common vocab"},
-          {"before": "Google", "after": "Google", "context": "proper noun, keep"}
-        ],
-        "confidence_default": 0.8,
-        "variation_index": "medium",
-        "deprecated": false,
-        "notes": "If unsure, prefer variant with higher usage per V.I. or corpus counts"
-      },
-      {
-        "rule_id": "INS_HYPH_REDUP_01",
-        "op_type": "insertion",
-        "family": "reduplication_marking",
-        "paper_rule": "RULE-27 DASH application",
-        "ortho_label": "ORTHO.REDUP_HYPHEN", 
-        "description": "Insert hyphen for reduplication readability",
-        "pattern": "CVCV CVCV→CVCV-CVCV",
-        "scope": "substr",
-        "canonical_choice": "hyphenated_reduplication",
-        "rationale": "Readability improvement for full reduplication",
-        "preconditions": [
-          "is_full_reduplication",
-          "improves_readability"
-        ],
-        "examples": [
-          {"before": "sama sama", "after": "sama-sama", "context": "full reduplication"},
-          {"before": "halo halo", "after": "halo-halo", "context": "compound reduplication"}
-        ],
-        "confidence_default": 0.97,
-        "variation_index": "high",
-        "deprecated": false,
-        "notes": "Part of DASH vs NODASH high-frequency rule family"
-      }
+      "scope": "char",
+      "canonical_choice": "prefer 'o' in open syllables; 'u' in closed loan syllables",
+      "rationale": "High-frequency alternation; follow modern orthography where possible",
+      "preconditions": ["lang in [fil,tag]", "not_proper_name"],
+      "examples": [{"from":"anu","to":"ano"},{"from":"anu-ano","to":"ano-ano"}],
+      "confidence_default": 0.95,
+      "variation_index": "high",
+      "priority": 90,
+      "active": true,
+      "deprecated": false,
+      "notes": "Requires morphological/syllabification hints for precise application"
+    },
+
+    {
+      "rule_id": "ORTH_002",
+      "legacy_ids": ["SUB_IE_01"],
+      "op_type": "substitution",
+      "family": "vowel_substitution",
+      "paper_rule": "i vs e variants",
+      "description": "Prefer 'e' in many Filipinized adaptations but be context-dependent",
+      "pattern": "(?<=\\w)([ie])(?=\\w)",
+      "direction": {"type":"context_dependent", "policy":[{"condition":"common_variant=='e'","target":"e"},{"condition":"default","target":"preserve"}]},
+      "scope": "char",
+      "canonical_choice": "prefer 'e' in many common loans/adaptations",
+      "preconditions": ["lang in [fil,tag]", "not_proper_name"],
+      "examples": [{"from":"kase","to":"kasi"}, {"from": "kame", "to": "kami"}, {"from": "naten", "to": "natin"}],
+      "confidence_default": 0.88,
+      "variation_index": "high",
+      "priority": 80,
+      "active": true
+    },
+
+    {
+      "rule_id": "ORTH_003",
+      "legacy_ids": ["SUB_CONS_CK_01"],
+      "op_type": "substitution",
+      "family": "consonant_substitution",
+      "paper_rule": "c vs k / c vs s / ks vs x",
+      "description": "Map Spanish-influenced consonants to Filipino-preferred forms (c→k/s, ks→x etc.) context-dependent",
+      "pattern": "(?i)c|ch|ks|x",
+      "direction": {"type":"context_dependent","policy":[{"condition":"before_vowel_and_native_syllable","target":"k"},{"condition":"before_ei_or_soft_sound","target":"s"},{"condition":"sequence_ks","target":"ks_to_x_or_keep"}]},
+      "scope": "substr",
+      "canonical_choice": "use k/prefers for phonetic mapping; ch->ts often",
+      "preconditions": ["lang in [fil,tag]","not_proper_name"],
+      "examples": [{"from":"balcon","to":"balkon"},{"from":"princesa","to":"prinsesa"},{"from":"taksi","to":"taxi"}],
+      "confidence_default": 0.9,
+      "variation_index": "medium",
+      "priority": 78,
+      "active": true
+    },
+
+    {
+      "rule_id": "ORTH_004",
+      "legacy_ids": ["SUB_F_P_01"],
+      "op_type": "substitution",
+      "family": "consonant_substitution",
+      "paper_rule": "f vs p",
+      "description": "Prefer 'p' for older loans and native substitutions; keep 'f' in international names and modern borrowings",
+      "pattern": "f",
+      "direction": {"type":"context_dependent","policy":[{"condition":"is_international_name","target":"preserve"},{"condition":"is_nativeized_loan","target":"p"}]},
+      "scope": "char",
+      "canonical_choice": "prefer p in common Filipinized forms (pilipino vs filipino is nuanced)",
+      "preconditions": ["lang in [fil,tag]","not_proper_name"],
+      "examples": [{"from":"filosopo","to":"pilosopo"}],
+      "confidence_default": 0.85,
+      "variation_index": "medium",
+      "priority": 70,
+      "active": true
+    },
+
+    {
+      "rule_id": "ORTH_005",
+      "legacy_ids": ["HYPO_REDUP_01","SUB_DASH_01"],
+      "op_type": "insertion",
+      "family": "reduplication_handling",
+      "paper_rule": "dash vs no dash / reduplication",
+      "description": "Hyphenate full reduplication and mark affix boundaries when morphological analyzer confirms reduplication",
+      "pattern": "\\b(\\w+)\\s+\\1\\b",
+      "direction": "space->hyphen",
+      "scope": "substr",
+      "canonical_choice": "hyphenated_reduplication",
+      "rationale": "Orthography and readability; aligns with dictionary conventions",
+      "preconditions": ["morph.is_reduplication == true","not_proper_name"],
+      "examples": [{"from":"araw araw","to":"araw-araw"}],
+      "confidence_default": 0.98,
+      "variation_index": "high",
+      "priority": 96,
+      "active": true
+    },
+
+    {
+      "rule_id": "ORTH_006",
+      "legacy_ids": ["DEL_REPEAT_01"],
+      "op_type": "deletion",
+      "family": "repetition_deletion",
+      "description": "Collapse expressive elongation (character repetitions) used in chat/emphasis",
+      "pattern": "(.)\\1{2,}",
+      "direction": "reduce_repetition",
+      "scope": "char",
+      "canonical_choice": "single_character",
+      "rationale": "Remove emphasis-induced noise while preserving single-character geminates when needed",
+      "preconditions": ["not_morphological_reduplication"],
+      "examples": [
+                    {"from":"akoooo","to":"ako"},
+                    {"from":"charrr","to":"char"},
+                    {"from":"tamah","to":"tama"},
+                    {"from":"maleh","to":"mali"}
+                  ],
+      "confidence_default": 0.99,
+      "variation_index": "low",
+      "priority": 98,
+      "active": true
+    },
+
+    {
+      "rule_id": "ORTH_007",
+      "legacy_ids": ["SPLIT_DIBA_01"],
+      "op_type": "split",
+      "family": "split_merge",
+      "description": "Expand contracted colloquialisms like d'ba / di'ba to full forms when negation or question context applies",
+      "pattern": "\\b(d'ba|di'ba|dba|d'yan|d'yan)\\b",
+      "direction": "expand_to_full_form",
+      "scope": "token",
+      "canonical_choice": "hindi ba or di ba depending on context",
+      "preconditions": ["negation_context OR preceding_token_indicates_hindi"],
+      "examples": [{"from":"d'ba","to":"hindi ba"}],
+      "confidence_default": 0.88,
+      "variation_index": "high",
+      "priority": 90,
+      "active": true
+    },
+
+    {
+      "rule_id": "ORTH_008",
+      "legacy_ids": ["SLANG_MAP_01"],
+      "op_type": "substitution",
+      "family": "slang_to_standard",
+      "description": "Map tokens using slang_lexicon.json (exact token lookup). High-priority lexical normalizations.",
+      "pattern": "lexicon:slang_lexicon",
+      "direction": "to_standard",
+      "scope": "token",
+      "canonical_choice": "lexicon mapping",
+      "preconditions": ["token_in_lexicon('slang_lexicon')"],
+      "examples": [{"from":"tas","to":"tapos"},{"from":"wla","to":"wala"}],
+      "confidence_default": 0.95,
+      "variation_index": "medium",
+      "priority": 92,
+      "active": true
+    },
+
+    {
+      "rule_id": "ORTH_009",
+      "legacy_ids": ["CODE_SW_EN_01"],
+      "op_type": "tag_or_preserve",
+      "family": "code_switch_handling",
+      "description": "Detect English tokens in a Filipino context and preserve them while tagging for MT.",
+      "pattern": "lang_detect(token)=='en' AND surrounding_lang=='fil'",
+      "direction": "preserve_and_tag",
+      "scope": "token",
+      "canonical_choice": "preserve",
+      "preconditions": [],
+      "examples": [{"from":"submit","to":"submit","reason":"preserve_english_token"}],
+      "confidence_default": 0.97,
+      "variation_index": "low",
+      "priority": 95,
+      "active": true
+    },
+
+    {
+      "rule_id": "ORTH_010",
+      "legacy_ids": ["CLITIC_EXPAND_01"],
+      "op_type": "insertion",
+      "family": "clitic_spacing",
+      "description": "Split/expand common merged clitics (e.g., 'syang' -> 'siya ng'/'siya ang' depending on context) and expand 'k'->'ka' when standalone",
+      "pattern": "\\b(k|d|s|p|ny|syang|nyo|nga)\\b",
+      "direction": "expand_clitic",
+      "scope": "token",
+      "canonical_choice": "expanded forms when preconditions met",
+      "preconditions": ["lang in [fil,tag]","not_proper_name"],
+      "examples": [
+                    {"from":"syang","to":"siyang"},
+                    {"from":"k","to":"ka"},
+                    {"from":"nd","to":"hindi"}, 
+                    {"from":"hndi","to":"hindi"},  
+                    {"from":"hnd","to":"hindi"},  
+                    {"from":"syang","to":"siyang"}
+                ],
+      "confidence_default": 0.9,
+      "variation_index": "high",
+      "priority": 89,
+      "active": true
+    },
+
+    {
+      "rule_id": "ORTH_011",
+      "legacy_ids": ["MERGE_HYPHEN_01"],
+      "op_type": "merge",
+      "family": "merge_affixation",
+      "description": "Merge 'naka'/'naka' constructs with tokens into hyphenated forms (naka isip -> naka-isip) when affix boundary detected",
+      "pattern": "\\b(naka)\\s+(\\w+)\\b",
+      "direction": "merge_affix",
+      "scope": "substr",
+      "canonical_choice": "naka-<word>",
+      "preconditions": ["morph.is_affix_boundary == true"],
+      "examples": [
+                    {"from":"naka isip","to":"naka-isip"},
+                    {"from":"nag reply","to":"nag-reply"},  
+      {"from":"mag rereply","to":"magre-reply"},  
+      {"from":"nakaisip","to":"naka-isip"},  
+      {"from":"nagwoworry","to":"nagwo-worry"}
     ],
-    "families": {
-      "dash_normalization": {
-        "description": "Standardize hyphen usage for morpheme boundaries",
-        "priority": 1,
-        "paper_frequency_rank": 1
-      },
-      "orthography_variant": {
-        "description": "Core orthographic alternations from comparative analysis",
-        "priority": 2,
-        "paper_frequency_rank": "1-5"
-      },
-      "duplicate_letter": {
-        "description": "Remove unintended character duplications",
-        "priority": 3,
-        "paper_frequency_rank": "medium"
-      },
-      "reduplication_marking": {
-        "description": "Standardize reduplication hyphenation",
-        "priority": 4,
-        "paper_frequency_rank": 1
-      },
-      "slang_normalization": {
-        "description": "Expand informal shortcuts to standard forms",
-        "priority": 5,
-        "paper_frequency_rank": "low"
-      },
-      "loan_normalization": {
-        "description": "Apply 2001 Revisyon loanword policy",
-        "priority": 6,
-        "paper_frequency_rank": "medium"
-      }
+      "confidence_default": 0.9,
+      "variation_index": "medium",
+      "priority": 85,
+      "active": true
     },
-    "reasons": {
-      "orthography_variant": "Standardizing spelling per official rules and comparative analysis",
-      "misspelling": "Correcting obvious typos and duplications",
-      "reduplication_marking": "Adding/removing reduplication hyphens per readability",
-      "affix_morphology": "Handling morphological processes and boundaries", 
-      "duplicate_letter": "Removing unintended duplicates and emphasis lengthening",
-      "slang_normalization": "Expanding informal language to standard forms",
-      "loan_normalization": "Applying 2001 Revisyon Filipinization policy",
-      "dash_normalization": "Standardizing hyphen usage per morpheme boundaries"
-    },
-    "edge_cases": {
-      "proper_nouns": "Keep as-is unless widely conventionalized in mainstream media",
-      "brand_names": "Preserve original unless dictionary shows Filipinized form",
-      "user_intent_typography": "Preserve in Orig, normalize in Norm, tag as EMPHASIS",
-      "slang_clipped_forms": "Pick stance per item (syempre canonical, sya→siya)",
-      "pronoun_clitics": "Standardize attachment (ko/'ko per policy)"
+
+    {
+      "rule_id": "ORTH_012",
+      "legacy_ids": ["TYPO_COMMON_01"],
+      "op_type": "substitution",
+      "family": "tokenization_cleanup",
+      "description": "Common typos mapping from typos.json",
+      "pattern": "lexicon:typos",
+      "direction": "to_standard",
+      "scope": "token",
+      "canonical_choice": "lexicon mapping",
+      "preconditions": ["token_in_lexicon('typos')"],
+      "examples": [{"from":"charrr","to":"char"},{"from":"hace","to":"have"}],
+      "confidence_default": 0.95,
+      "variation_index": "low",
+      "priority": 86,
+      "active": true
     }
-  }
+  ]
+}
+
+
+
+
+
+
