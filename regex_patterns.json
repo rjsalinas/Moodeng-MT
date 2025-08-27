@@ -1,0 +1,38 @@
+{
+  "ELONGATION_COLLAPSE": {
+    "pattern": "(.)\\1{2,}",
+    "replacement": "\\1",
+    "description": "Collapse expressive elongation (3+ repeated chars -> single char). Use precondition to avoid removing true reduplication."
+  },
+  "VOWEL_CLIPPING": {
+    "pattern": "([aeiou])\\1+",
+    "replacement": "\\1",
+    "description": "Reduce vowel repetitions (optional: preserve for emphasis if needed)."
+  },
+  "REDUPLICATION_ADJACENT": {
+    "pattern": "\\b(\\w+)\\s+\\1\\b",
+    "replacement": "\\1-\\1",
+    "description": "Convert adjacent word duplication into hyphenated reduplication. Use morph precondition to confirm."
+  },
+  "APOSTROPHE_CONTRACTION": {
+    "pattern": "\\b(d'|di'|n'|n)([a-zA-Z]+)\\b",
+    "replacement": "$1$2",
+    "description": "Capture contractions like d'ba, expand in rule logic; replacement is token-level expansion handled in rules."
+  },
+  "CLITIC_MERGE_SPLIT": {
+    "pattern": "\\b(\\w+)(na|pa|din|rin|lang)\\b",
+    "replacement": "$1 $2",
+    "description": "Split merged clitics into separate tokens (use morphological check for boundaries)."
+  },
+  "NON_ALNUM_STRIP": {
+    "pattern": "[^\\w\\s'-]",
+    "replacement": " ",
+    "description": "Optionally normalize stray punctuation to spaces (careful with emoticons)."
+  }
+}
+
+
+
+
+
+

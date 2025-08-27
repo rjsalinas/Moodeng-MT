@@ -1,0 +1,26 @@
+{
+  "morphology_backend": "calamancy",
+  "auto_apply_min_confidence": 0.9,
+  "family_order": [
+    "repetition_deletion",
+    "slang_to_standard",
+    "tokenization_cleanup",
+    "vowel_substitution",
+    "consonant_substitution",
+    "reduplication_handling",
+    "clitic_spacing",
+    "merge_affixation",
+    "code_switch_handling"
+  ],
+  "logging": {
+    "edits_logfile": "normalization_edits.jsonl",
+    "sample_rate_for_review": 0.05
+  },
+  "default_confidence_if_missing": 0.75
+}
+
+
+
+
+
+
