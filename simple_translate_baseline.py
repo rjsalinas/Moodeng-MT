@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Simple script to translate a single Filipino text to English
-Enhanced with robust error handling and compatibility fixes
+Simple script to translate Filipino text to English using the baseline model
+Trained on filipino_english_parallel_corpus.csv without CalamanCy enhancements
 """
 
 import torch
@@ -42,13 +42,13 @@ def clean_adapter_config(config_path):
         print(f"⚠️  Warning: Could not clean adapter config: {e}")
         return config_path
 
-def translate_filipino_to_english(text, model_path="fine-tuned-mbart-tl2en-best"):
+def translate_filipino_to_english_baseline(text, model_path="fine-tuned-mbart-tl2en-baseline-best"):
     """
-    Translate Filipino text to English using the fine-tuned model
+    Translate Filipino text to English using the baseline fine-tuned model
     
     Args:
         text (str): Filipino text to translate
-        model_path (str): Path to the saved fine-tuned model
+        model_path (str): Path to the saved baseline fine-tuned model
     
     Returns:
         str: English translation
@@ -66,10 +66,10 @@ def translate_filipino_to_english(text, model_path="fine-tuned-mbart-tl2en-best"
             model_path = os.path.dirname(cleaned_config_path)
         
         # Load the fine-tuned model (LoRA adapters)
-        print(f"🔧 Loading LoRA adapters from: {model_path}")
+        print(f"🔧 Loading baseline LoRA adapters from: {model_path}")
         try:
             model = PeftModel.from_pretrained(base_model, model_path)
-            print("✅ LoRA adapters loaded successfully")
+            print("✅ Baseline LoRA adapters loaded successfully")
         except Exception as e:
             print(f"⚠️  Standard loading failed: {e}")
             print("🔄 Trying alternative loading method...")
@@ -173,39 +173,55 @@ def translate_filipino_to_english(text, model_path="fine-tuned-mbart-tl2en-best"
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python simple_translate.py 'Filipino text here'")
-        print("Example: python simple_translate.py 'Kamusta ka?'")
+        print("Usage: python simple_translate_baseline.py 'Filipino text here'")
+        print("Example: python simple_translate_baseline.py 'Kamusta ka?'")
+        print("\nThis script uses the baseline model trained on filipino_english_parallel_corpus.csv")
         return
     
     # Get the text from command line arguments
     filipino_text = " ".join(sys.argv[1:])
     
     print(f"🇵🇭 Filipino: {filipino_text}")
-    print("🔄 Starting translation process...")
+    print("🔄 Starting baseline translation process...")
     
     # Check if model directory exists
-    model_path = "fine-tuned-mbart-tl2en-best"
+    model_path = "fine-tuned-mbart-tl2en-baseline-best"
     if not os.path.exists(model_path):
-        print(f"⚠️  Model directory '{model_path}' not found!")
-        print("🔄 Trying alternative model directory...")
-        model_path = "fine-tuned-mbart-tl2en"
+        print(f"⚠️  Baseline model directory '{model_path}' not found!")
+        print("🔄 Trying alternative baseline model directory...")
+        model_path = "fine-tuned-mbart-tl2en-baseline"
         if not os.path.exists(model_path):
-            print(f"❌ No model directory found. Please ensure the model is trained first.")
+            print(f"❌ No baseline model directory found.")
+            print("💡 To train the baseline model, run: python model_training_baseline.py")
             return
     
-    print(f"🔧 Using model directory: {model_path}")
+    # Check if the model has the necessary files
+    required_files = ["adapter_config.json", "adapter_model.safetensors"]
+    missing_files = [f for f in required_files if not os.path.exists(os.path.join(model_path, f))]
+    
+    if missing_files:
+        print(f"⚠️  Baseline model is missing required files: {missing_files}")
+        print("🔄 This suggests the model wasn't fully trained or saved properly.")
+        print("💡 To fix this, retrain the baseline model: python model_training_baseline.py")
+        return
+    
+    print(f"✅ Baseline model directory '{model_path}' has all required files")
+    
+    print(f"🔧 Using baseline model directory: {model_path}")
     
     # Translate
-    english_translation = translate_filipino_to_english(filipino_text, model_path)
+    english_translation = translate_filipino_to_english_baseline(filipino_text, model_path)
     
     if english_translation:
-        print(f"🇺🇸 English: {english_translation}")
-        print("🎉 Translation completed successfully!")
+        print(f"🇺🇸 English (Baseline): {english_translation}")
+        print("🎉 Baseline translation completed successfully!")
+        print("\n💡 Note: This is the baseline model trained without CalamanCy enhancements.")
+        print("   For enhanced translations, use: python simple_translate.py")
     else:
-        print("❌ Translation failed")
+        print("❌ Baseline translation failed")
         print("💡 Troubleshooting tips:")
-        print("   1. Check if the model was trained successfully")
-        print("   2. Verify the model directory structure")
+        print("   1. Check if the baseline model was trained successfully")
+        print("   2. Verify the baseline model directory structure")
         print("   3. Check for compatibility issues with PEFT version")
         print("   4. Try running: pip install --upgrade peft")
 

@@ -9,6 +9,34 @@ If you are here to reproduce the machine translation results, start with the Qui
 
 ## 🔰 Quickstart: Enhanced Translation Pipeline
 
+### 🛠️ Setup (First Time Only)
+
+**Option 1: Automated Setup**
+```bash
+# Windows
+install_requirements.bat
+
+# Linux/Mac
+chmod +x activate_env.sh
+./activate_env.sh
+pip install -r requirements.txt
+```
+
+**Option 2: Manual Setup**
+See `SETUP_GUIDE.md` for detailed instructions.
+
+### 🚀 Activate Environment
+```bash
+# Windows (Command Prompt)
+activate_env.bat
+
+# Windows (PowerShell)
+.\activate_env.ps1
+
+# Linux/Mac
+./activate_env.sh
+```
+
 ### 1) Prepare/Enhance the Parallel Corpus
 
 Input CSV: `filipino_english_parallel_corpus.csv`
@@ -42,6 +70,7 @@ python model_training.py
 ```
 
 ### Where to read more
+- `SETUP_GUIDE.md`: Complete environment setup and troubleshooting
 - `PREPROCESSING_PIPELINE.md`: End‑to‑end preprocessing (now includes CalamanCy batch pipeline and inference note)
 - `MODEL_TRAINING.md`: Training objectives, losses, schedules, checkpoints, and inference usage
 - `README_TRANSLATION.md`: Practical training/inference guide aligned with scripts
