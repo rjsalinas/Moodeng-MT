@@ -85,6 +85,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 CUDA_ERROR_OCCURRED = False
 
+# Detect availability of DirectML as an alternative GPU backend on Windows
+try:
+    import torch_directml as _dml  # type: ignore
+    DML_AVAILABLE = True
+except Exception:
+    _dml = None
+    DML_AVAILABLE = False
+
 def manage_cuda_memory():
     """Manage CUDA memory to prevent device-side asserts."""
     if torch.cuda.is_available():
@@ -93,6 +101,13 @@ def manage_cuda_memory():
             torch.cuda.synchronize()
         except Exception:
             pass
+
+def _is_dml_device(dev) -> bool:
+    try:
+        return not isinstance(dev, torch.device) and "privateuseone" in str(dev)
+    except Exception:
+        return False
+
 
 def safe_save_pretrained(model: torch.nn.Module, output_dir: str) -> bool:
     """Save by materializing a CPU state_dict to avoid CUDA asserts during serialization."""
@@ -105,9 +120,13 @@ def safe_save_pretrained(model: torch.nn.Module, output_dir: str) -> bool:
             except Exception:
                 pass
         
-        # Move model to CPU for safe saving
-        model_cpu = model.cpu()
-        model_cpu.eval()
+        # Move model to CPU for safe saving (special-case DirectML)
+        if _is_dml_device(next(model.parameters()).device):
+            # Avoid model.cpu() which can deadlock on DML; instead read tensors and copy to CPU individually
+            model_cpu = model  # keep reference for config save
+        else:
+            model_cpu = model.cpu()
+            model_cpu.eval()
         
         # Create CPU state dict
         state = {}
@@ -130,10 +149,11 @@ def safe_save_pretrained(model: torch.nn.Module, output_dir: str) -> bool:
             pass
         
         # Move model back to original device
-        if torch.cuda.is_available():
-            model.to("cuda")
-        else:
-            model.to("cpu")
+        try:
+            original_device = "cuda" if torch.cuda.is_available() else ("cpu" if isinstance(next(model.parameters()).device, torch.device) else next(model.parameters()).device)
+            model.to(original_device)
+        except Exception:
+            pass
             
         return True
     except Exception as e:
@@ -544,20 +564,33 @@ def main():
         print("   - Basic preprocessing only")
         print("   - Install with: pip install calamancy spacy[transformers]")
     
-    # Device configuration for GPU training (standardize to cuda:0)
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    if device.type == "cuda":
+    # Device configuration with DirectML fallback (use env PREFER_DML=1 to prefer DML)
+    prefer_dml = os.getenv("PREFER_DML", "0") == "1"
+    device = torch.device("cpu")
+    if prefer_dml and DML_AVAILABLE:
+        try:
+            device = _dml.device()
+        except Exception:
+            device = torch.device("cpu")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda:0")
         try:
             torch.cuda.set_device(0)
             print(f"🚀 CUDA device: {torch.cuda.get_device_name(0)}")
             print(f"💾 GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
         except Exception as e:
             print(f"⚠️  CUDA setup warning: {e}")
+    elif DML_AVAILABLE:
+        try:
+            device = _dml.device()
+        except Exception:
+            device = torch.device("cpu")
+
     print(f"📱 Using device: {device}")
-    
-    if device.type == "cpu":
-        print("⚠️  Warning: CUDA not available. Training will be slower on CPU.")
-        print("   Consider installing PyTorch with CUDA support.")
+    if isinstance(device, torch.device) and device.type == "cpu":
+        print("⚠️  Warning: No GPU backend selected. Training will be slower on CPU.")
+        if not torch.cuda.is_available() and not DML_AVAILABLE:
+            print("   Consider installing a CUDA build of PyTorch or torch-directml.")
     
     # Load tokenizer
     print("\nLoading tokenizer...")
@@ -620,12 +653,15 @@ def main():
         val_dataset, test_dataset = random_split(temp_dataset, [val_size, test_size], generator=g)
 
         # Create data loaders (GPU optimized with reduced batch size)
-        pin = (device.type == "cuda")
-        # Reduce batch size to prevent CUDA errors
-        batch_size = 2 if device.type == "cuda" else 4
-        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=pin)
-        val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, pin_memory=pin)
-        test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, pin_memory=pin)
+        # DataLoader settings: avoid pin_memory/non_blocking on DirectML to prevent deadlocks
+        is_cuda = (isinstance(device, torch.device) and device.type == "cuda")
+        use_pin = is_cuda
+        # Reduce batch size to prevent GPU backend issues
+        batch_size = 2 if (is_cuda) else 2
+        num_workers = 0
+        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=use_pin, num_workers=num_workers)
+        val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, pin_memory=use_pin, num_workers=num_workers)
+        test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, pin_memory=use_pin, num_workers=num_workers)
 
         print(f"DataLoader prepared (70/15/15 split):")
         print(f"   Training samples: {len(train_dataset)} (70%)")
@@ -779,9 +815,9 @@ def main():
             try:
                 # Move batch to device with error handling
                 try:
-                    input_ids = batch["input_ids"].to(device, non_blocking=True)
-                    attention_mask = batch["attention_mask"].to(device, non_blocking=True)
-                    labels = batch["labels"].to(device, non_blocking=True)
+                    input_ids = batch["input_ids"].to(device)
+                    attention_mask = batch["attention_mask"].to(device)
+                    labels = batch["labels"].to(device)
                 except Exception as e:
                     print(f"\n⚠️  Device transfer error in batch {batch_idx}: {e}")
                     continue
