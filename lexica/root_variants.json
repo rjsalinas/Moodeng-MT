@@ -1,0 +1,16 @@
+{
+  "ganon": {"to": "ganoon", "source":"user_list", "confidence": 0.9},
+  "ganoon": {"to": "ganoon", "source":"user_list", "confidence": 0.99},
+  "icoconsider": {"to": "ico-consider", "source":"user_list", "confidence": 0.6},
+  "iko-consider": {"to": "ico-consider", "source":"user_list", "confidence": 0.9},
+  "idlip": {"to": "idlip", "source":"user_list", "confidence": 0.6},
+  "iiglip": {"to": "iiglip", "source":"user_list", "confidence": 0.6},
+  "dalawa": {"to": "dalawa", "source":"user_list", "confidence": 0.98},
+  "dinalawa": {"to": "dinalawa", "source":"user_list", "confidence": 0.9}
+}
+
+
+
+
+
+

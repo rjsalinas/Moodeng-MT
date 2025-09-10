@@ -1,0 +1,212 @@
+Spanish Tweet Removal Log
+==================================================
+Generated: 2025-08-24T15:50:32.902718
+Input file: tweets_id_filipino_text_only.csv
+Output file: tweets_id_filipino_text_only_no_spanish.csv
+
+Summary:
+  Total tweets: 3104
+  Spanish tweets removed: 33
+  Filipino tweets kept: 3071
+  Removal rate: 1.1%
+
+Removed Tweets:
+------------------------------
+ID: 1463122105680252936
+Text: Buenos días, me han vuelto a rechazar el verificado 🤷🏻‍♂️ No le caigo bien a @verified
+Spanish words: buenos, me, el, le, bien
+Confidence: 0.533
+Reason: Spanish content detected
+------------------------------
+ID: 1463239450398539780
+Text: Javi, tu inténtalo una y otra vez hasta que se cansen y por pesao te lo den!! Jajajjaja es broma, pero " El que lo sigue lo consigue" así que paciencia algún día cuando menos te lo esperes te lo Dan, y si no hacemos un escrito pa que te lo den!! Mucha suerte 😘😘
+Spanish words: tu, una, que, se, por, te, es, el, que, que, menos, te, te, un, que, te
+Confidence: 0.396
+Reason: Spanish content detected
+------------------------------
+ID: 1463141595763679239
+Text: lo que hay que hacer para que te retiren una demanda #CarlotaFraude
+Spanish words: que, que, para, que, te, una
+Confidence: 0.583
+Reason: Spanish content detected
+------------------------------
+ID: 1463237927874539520
+Text: Esta tipa no sabe que hacer para sobresalir y seguir teniendo su silla en sálvame, lo mismo habla por ☎️ con Dolores Vázquez que ahora dice que apoya a Olga. #CarlotaFraude
+Spanish words: sabe, que, para, su, habla, por, con, que, ahora, dice, que
+Confidence: 0.567
+Reason: Spanish content detected
+------------------------------
+ID: 1463232184379228169
+Text: Si la pobre de Evelyn y su pareja Wilson creo que se llama, está esperando unas disculpas de parte de este individuo que esperen sentados que de pie se van a cansar... (Todos tienen la culpa menos yo)
+Spanish words: la, su, que, se, está, unas, que, que, se, van, tienen, la, menos, yo
+Confidence: 0.447
+Reason: Spanish content detected
+------------------------------
+ID: 1462705074644217857
+Text: 35 years na po, madam VP. Mag-inang Aquino pa po ang nakaupo sa Malacañang. Ito pa rin po ang kinakanta ninyo?
+Spanish words: 
+Confidence: 0.045
+Reason: Spanish content detected
+------------------------------
+ID: 1463090899815215110
+Text: Lo más flipante es que en el chat le echaban la culpa a Javi por llamar a Enrique y a Enrique por llamar a Jordi. La culpa es de todos, menos de él. 🤦‍♀️
+Spanish words: más, es, que, el, le, la, por, por, la, es, menos, él
+Confidence: 0.485
+Reason: Spanish content detected
+------------------------------
+ID: 1463233638020132872
+Text: Tienes toda la razón @Lia_RiOs18 👍
+Spanish words: la, razón
+Confidence: 0.600
+Reason: Spanish content detected
+------------------------------
+ID: 1463122991949168642
+Text: Por cierto, esta mañana me copiaron cutremente una noticia que tenía guardada en mi móvil desde hace CUATRO DÍAS. El canal plagiador sigue en las mismas en lugar de trabajar. A lo mejor se quiere comprar un BMW.
+Spanish words: por, mañana, me, una, que, mi, hace, el, las, se, quiere, un
+Confidence: 0.474
+Reason: Spanish content detected
+------------------------------
+ID: 1463123460465610755
+Text: Ahora que ya te la han robado te la puedo robar yo?
+Spanish words: ahora, que, te, la, te, la, yo
+Confidence: 0.750
+Reason: Spanish content detected
+------------------------------
+ID: 1463240589982453763
+Text: Definitivamente YouTube me odia. Directo desmonetizado! Extracto del directo desmonetizado. Eso sí gracias por monetizarme el video de Juanca que generará 2 euros jajajaja!
+Spanish words: me, gracias, por, el, que, jajajaja
+Confidence: 0.417
+Reason: Spanish content detected
+------------------------------
+ID: 1463244365149741060
+Text: Pues vaya con YouTube, a un tío como tu que nos haces reír y ser felices te desmonetizan tus directos y a otros que solo saben dar pena y dar puyitas sibilinamente hasta le premian, el mundo al revés, vamos!!!🤦‍♀️😘😘😘
+Spanish words: con, un, tu, que, nos, te, que, saben, le, el, mundo
+Confidence: 0.425
+Reason: Spanish content detected
+------------------------------
+ID: 1463242056768307211
+Text: Si es así envidia pura y dura, nada más, a él le gustará tener apalabrado su dinero que prefiere tener un coche que se cae a pedazos, para dar pena? Que gastarse los cuartos en un buen coche e ir seguro cuando vaya de viaje...
+Spanish words: es, más, él, le, su, que, un, que, se, para, que, los, un
+Confidence: 0.489
+Reason: Spanish content detected
+------------------------------
+ID: 1463196546703532033
+Text: Ho letto su ig la storia di una bambina che, vagando per le strade di Istanbul per andare a trovare qualcuno, va a finire a casa di BA e trova davanti la porta G. E fa un selfie con lei. Il culo di questa bambina. Davvero. Ha scoperto la tanaaaa
+Spanish words: su, la, una, le, va, casa, la, un, con, la
+Confidence: 0.260
+Reason: Spanish content detected
+------------------------------
+ID: 1463201993585999880
+Text: Ahahah noi, proprio perché abbiamo il cervello malato, non troveremmo proprio niente ahahahah la purezza di cuore e di intenti vince sempre. Ma non è il nostro caso 🤣🤣🤣🤣
+Spanish words: la
+Confidence: 0.071
+Reason: Spanish content detected
+------------------------------
+ID: 1463664092065898500
+Text: LOL😆😂
+Spanish words: lol
+Confidence: 1.000
+Reason: Spanish content detected
+------------------------------
+ID: 1463099777604853768
+Text: El sábado, después de analizar el caso de Rittenhouse, salseamos un rato con @Alazne_en_Clave, @MatrixProgre, y @thormyrerrante, y quería traer un estracto relacionado con @javieroliveira_ y la ton**ría que comenta cierto fandom por ahí sobre su coche 1/2 invidious.tiekoetter.com/-4EZdnb5Z9w
+Spanish words: el, sábado, después, el, un, con, un, con, la, que, por, ahí, sobre, su
+Confidence: 0.545
+Reason: Spanish content detected
+------------------------------
+ID: 1463101617331482625
+Text: Yo aún diría más: ¿a partir de ahora hay que pedir permiso a Juanjus para teñirse el pelo?
+Spanish words: yo, más, ahora, que, para, el
+Confidence: 0.722
+Reason: Spanish content detected
+------------------------------
+ID: 1463242777261711371
+Text: Pues entonces yo soy una lela, por que me tiño el pelo de amarillo👱‍♀️🤦‍♀️
+Spanish words: entonces, yo, una, por, que, me, el
+Confidence: 0.571
+Reason: Spanish content detected
+------------------------------
+ID: 1463123720885702664
+Text: Is Joe Biden a reporter lol
+Spanish words: lol
+Confidence: 0.333
+Reason: Spanish content detected
+------------------------------
+ID: 1461843584345247747
+Text: Aanhin mo yang pag mamahal mo kung manalo yang lugaw nyo? Maraming babayarang utang na loob yan sa partido 🤣 baka pati malacañang maibenta
+Spanish words: 
+Confidence: 0.087
+Reason: Spanish content detected
+------------------------------
+ID: 1463131151573209088
+Text: 'Di ba imbis na national effort that should be coming from the head of state (aka yung tuta sa Malacañang) bahala na lang kung magaling ang LGU mo o hindi? O kung maabot ka ng efforts ng OVP ni Leni? O kung may vaccination efforts ang kumpanyang pinagtatrabahuhan? 'Di ba?
+Spanish words: 
+Confidence: 0.020
+Reason: Spanish content detected
+------------------------------
+ID: 1463131548782190592
+Text: Omg gandaaaa!!
+Spanish words: omg
+Confidence: 0.500
+Reason: Spanish content detected
+------------------------------
+ID: 1463124418121519109
+Text: Di ba dpat¿ aabot na ng 250 yung aken🧍‍♀️
+Spanish words: 
+Confidence: 0.111
+Reason: Spanish content detected
+------------------------------
+ID: 1463107463545524224
+Text: It😞 reALly 😭huRts😘 AnG😨m@gm4h4l😨 ng gAni2 🤫🤭kUnG cno🤭😰 phAng pInili kø 😰😯hiñdi 😳😳mhAkUha😤 Ng buø 😤hAngG@Ng g@nUn n4😰😰 l4ng ng4😞😞k@ilANg4n kØ tØng🤜✊ t@nGg4pin n@ s4 phUxxo 😤mHø😭😘👍 mhErhØn 😤nA 😍😰ngh@ng 😤ib4ng UmA4ngkin😃😆 +
+Spanish words: 
+Confidence: 0.025
+Reason: Spanish content detected
+------------------------------
+ID: 1463135251232747528
+Text: omg same 😭😭😭
+Spanish words: omg
+Confidence: 0.500
+Reason: Spanish content detected
+------------------------------
+ID: 1463163191190511617
+Text: Testing czar Vince Dizon is present at Pres. Rodrigo Duterte's "Talk to the People." The camp of presidential aspirant Manila Mayor Isko Moreno earlier said that Dizon joined his campaign team. This has been denied by Malacañang. (via News5/Maricel Halili)
+Spanish words: 
+Confidence: 0.071
+Reason: Spanish content detected
+------------------------------
+ID: 1463233143079505920
+Text: YES OMG HAHAHAHAHAHAHA
+Spanish words: omg
+Confidence: 0.333
+Reason: Spanish content detected
+------------------------------
+ID: 1463230504342228994
+Text: What the actual f*ck? Jü$tin bi3b3r having that 8 nominations? For what??? Taenang yan oi ano yon? Scammys talaga buset. His latest releases are mostly trash ano yun? Wtf talaga
+Spanish words: wtf
+Confidence: 0.062
+Reason: Spanish content detected
+------------------------------
+ID: 1463231283568386050
+Text: Lrt. OMG TALAGA
+Spanish words: omg
+Confidence: 0.333
+Reason: Spanish content detected
+------------------------------
+ID: 1463174736708575241
+Text: huh december na next week ¿??????
+Spanish words: 
+Confidence: 0.400
+Reason: Spanish content detected
+------------------------------
+ID: 1463222801037361152
+Text: Puñetaaa!!! Yung slacks ko ang sikip na. Nasusuot ko pa naman siya pero kapag tatry ko ng umupo parang maghehello yung pwet ko bwahahahahahaha. Need ko na talaga bumalik sa pag-wwork out 😭😭😭
+Spanish words: 
+Confidence: 0.030
+Reason: Spanish content detected
+------------------------------
+ID: 1463421242514436099
+Text: Thank u sir. 😘😘😘
+Spanish words: 
+Confidence: 0.333
+Reason: Spanish content detected
+------------------------------
