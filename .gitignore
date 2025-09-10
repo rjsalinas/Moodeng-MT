@@ -67,7 +67,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
->>>>>>> origin/training_test
+
 .Python
 build/
 develop-eggs/
@@ -210,8 +210,8 @@ Thumbs.db
 
 # Jupyter Notebooks
 # -----------------
-.ipynb_checkpoints/
-*.ipynb
+# .ipynb_checkpoints/
+# *.ipynb
 
 # Testing and Coverage
 # --------------------
