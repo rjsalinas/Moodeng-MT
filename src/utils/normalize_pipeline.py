@@ -20,10 +20,10 @@ from copy import deepcopy
 
 # ---------- Config / file paths ----------
 BASE = Path(".")
-RULES_FILE = BASE / "rules.json"
+RULES_FILE = BASE / "config/rules.json"
 REGEX_FILE = BASE / "regex_patterns.json"
 LEXICA_DIR = BASE / "lexica"
-PIPE_CFG_FILE = BASE / "pipeline_config.json"
+PIPE_CFG_FILE = BASE / "config/pipeline_config.json"
 
 # ---------- Helpers to load files ----------
 def load_json(p):

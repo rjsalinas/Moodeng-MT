@@ -18,7 +18,7 @@ import logging
 import time
 import os
 from pathlib import Path
-from enhanced_preprocessing import EnhancedFilipinoPreprocessor
+from src.preprocessing.enhanced_preprocessing import EnhancedFilipinoPreprocessor
 
 # Configure logging
 logging.basicConfig(

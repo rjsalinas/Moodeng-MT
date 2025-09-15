@@ -6,7 +6,7 @@ This script tests the enhanced preprocessing pipeline to ensure it works correct
 """
 
 import pandas as pd
-from enhanced_preprocessing import EnhancedFilipinoPreprocessor, enhance_filipino_dataset
+from src.preprocessing.enhanced_preprocessing import EnhancedFilipinoPreprocessor, enhance_filipino_dataset
 
 def test_calamancy_integration():
     """Test the CalamanCy integration with sample Filipino text."""

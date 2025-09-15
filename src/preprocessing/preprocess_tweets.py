@@ -3,7 +3,7 @@ import pandas as pd
 import re
 import os
 from datetime import datetime
-from normalizer import FilipinoNormalizer
+from src.preprocessing.normalizer import FilipinoNormalizer
 
 class TweetPreprocessor:
     def __init__(self, rules_path, log_dir):
@@ -117,7 +117,7 @@ class TweetPreprocessor:
 def main():
     """Main execution function"""
     # Configuration
-    rules_path = 'rules.json'
+    rules_path = 'config/rules.json'
     log_dir = 'logs'
     input_file = 'tweets_split_id.xlsx'
     output_file = 'tweets_split_id_processed.xlsx'

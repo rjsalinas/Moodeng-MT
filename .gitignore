@@ -1,57 +1,14 @@
-# Fine-tuned mBART Model Project .gitignore
-# =============================================
+# Virtual Environments
+virtual_envs/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+.env/
 
-# Model Files and Checkpoints
-# ---------------------------
-# Exclude the actual fine-tuned model files (these are large and should be downloaded separately)
-fine-tuned-mbart-tl2en/
-fine-tuned-mbart-tl2en-best/
-*.bin
-*.safetensors
-*.ckpt
-*.pt
-*.pth
-*.h5
-*.hdf5
-
-# Model Configuration (keep these for reference)
-# !fine-tuned-mbart-tl2en/config.json
-# !fine-tuned-mbart-tl2en/tokenizer.json
-# !fine-tuned-mbart-tl2en/special_tokens_map.json
-
-# Training Artifacts
-# ------------------
-# Exclude training logs and checkpoints
-logs/
-*.log
-training_logs/
-checkpoints/
-wandb/
-runs/
-lightning_logs/
-
-# Large Files and Backups
-# ------------------------
-large_files_backup/
-*.backup
-*.bak
-*.tmp
-*.temp
-
-# Data Files
-# -----------
-# Keep CSV files as per user preference, but exclude large data files
-# *.csv  # Commented out since user wants to keep CSV files
-*.xlsx
-*.xls
-*.json.gz
-*.csv.gz
-*.parquet
-*.hdf5
-*.h5
-
-# Python and Development
-# ----------------------
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -72,51 +29,43 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
-# Virtual Environments
-# -------------------
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
-.venv/
-.env/
+# Large Data Files
+data/raw/tweets/*.json
+*.json.gz
+*.csv.gz
+*.parquet
+*.hdf5
+*.h5
 
-# IDE and Editor Files
-# --------------------
+# Model Files
+models/*/adapter_model.safetensors
+models/*/pytorch_model.bin
+models/*/*.ckpt
+models/*/*.pt
+models/*/*.pth
+
+# Logs
+logs/*.log
+*.out
+*.err
+nohup.out
+spanish_removal_log.txt
+
+# Temporary Files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
-.DS_Store
-Thumbs.db
 
-# Jupyter Notebooks
-# -----------------
-.ipynb_checkpoints/
-*.ipynb
-
-# Testing and Coverage
-# --------------------
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
-coverage.xml
-*.cover
-.hypothesis/
-
-# Documentation Build
-# -------------------
-docs/_build/
-site/
-
-# OS Generated Files
-# ------------------
+# OS
 .DS_Store
 .DS_Store?
 ._*
@@ -125,88 +74,19 @@ site/
 ehthumbs.db
 Thumbs.db
 
-# Temporary Files
-# ---------------
-*.tmp
-*.temp
-*.swp
-*.swo
-*~
-
-# Large Dataset Files
-# -------------------
-# Exclude very large dataset files that shouldn't be in version control
-*.tar.gz
-*.zip
-*.rar
-*.7z
-*.bz2
-
-# Environment Variables
-# ---------------------
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# API Keys and Secrets
-# --------------------
-secrets.json
-config.ini
-*.key
-*.pem
-*.p12
-
-# Backup and Archive Files
-# -------------------------
-*.backup
-*.bak
-*.old
-*.orig
-*.rej
-
-# Log Files
-# ----------
-*.log
-*.out
-*.err
-nohup.out
-
-# Cache Directories
-# ------------------
-.cache/
-.pytest_cache/
-.mypy_cache/
-
-# Model Training Specific
-# -----------------------
-# Exclude model training artifacts
-model_checkpoints/
-best_model/
-latest_model/
-training_state/
-optimizer_state/
-scheduler_state/
+# Generated Files
+repo_structure.txt
 
 # Keep important files
-# --------------------
-!README.md
-!README_TRANSLATION.md
-!model_training_document.md
-!PREPROCESSING_PIPELINE.md
-!*.py
+!data/processed/**/*.csv
+!data/corpus/**/*.csv
+!config/**/*.json
+!src/**/*.py
+!scripts/**/*.py
+!docs/**/*.md
+!requirements*.txt
 !*.md
 !*.txt
-!*.csv
-!requirements*.txt
-!rules.json
-!run_*.bat
-!run_*.ps1
-
-# Exclude specific large files that might be accidentally included
-# --------------------------------------------------------------
-*.model
-*.vocab
-*.merges
-*.bpe
+!*.bat
+!*.ps1
+!*.sh

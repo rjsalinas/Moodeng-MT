@@ -58,7 +58,7 @@ except Exception:
 
 # Import enhanced preprocessing
 try:
-    from enhanced_preprocessing import enhance_filipino_dataset
+    from src.preprocessing.enhanced_preprocessing import enhance_filipino_dataset
     CALAMANCY_AVAILABLE = True
     print("CalamanCy integration available")
 except ImportError:

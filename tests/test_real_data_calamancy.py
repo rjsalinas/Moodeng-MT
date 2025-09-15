@@ -8,7 +8,7 @@ to see how it performs on real Filipino text data.
 
 import pandas as pd
 import logging
-from enhanced_preprocessing import EnhancedFilipinoPreprocessor
+from src.preprocessing.enhanced_preprocessing import EnhancedFilipinoPreprocessor
 import time
 
 # Configure logging

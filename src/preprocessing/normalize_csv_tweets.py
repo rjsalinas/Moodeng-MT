@@ -1,9 +1,9 @@
 import pandas as pd
 import os
 from datetime import datetime
-from normalizer import FilipinoNormalizer
+from src.preprocessing.normalizer import FilipinoNormalizer
 
-def normalize_csv_tweets(input_csv, output_csv, rules_path='rules.json', log_dir='logs'):
+def normalize_csv_tweets(input_csv, output_csv, rules_path='config/rules.json', log_dir='logs'):
     """
     Normalize the 'text' column from a CSV file and save with 'preprocessed_text' column
     

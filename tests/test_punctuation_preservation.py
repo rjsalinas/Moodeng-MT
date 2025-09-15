@@ -1,10 +1,10 @@
-from normalizer import FilipinoNormalizer
+from src.preprocessing.normalizer import FilipinoNormalizer
 
 def test_punctuation_preservation():
     """Test punctuation preservation and repeated mark removal"""
     
     # Initialize the normalizer
-    normalizer = FilipinoNormalizer('rules.json', 'logs')
+    normalizer = FilipinoNormalizer('config/rules.json', 'logs')
     
     # Test cases for punctuation handling
     test_cases = [

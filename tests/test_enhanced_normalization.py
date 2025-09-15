@@ -1,11 +1,11 @@
 import pandas as pd
-from normalizer import FilipinoNormalizer
+from src.preprocessing.normalizer import FilipinoNormalizer
 
 def test_enhanced_normalization():
     """Test all enhanced normalization rules"""
     
     # Initialize the enhanced normalizer
-    normalizer = FilipinoNormalizer('rules.json', 'logs')
+    normalizer = FilipinoNormalizer('config/rules.json', 'logs')
     
     # Test cases for each rule category
     test_cases = [
