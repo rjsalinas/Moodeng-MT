@@ -11,6 +11,67 @@ import sys
 import os
 import json
 
+# Add to simple_translate.py (near imports)
+from pathlib import Path
+import json, re
+
+# Reuse helpers from normalize_pipeline.py, simplified for inference
+BASE = Path(".")
+RULES_FILE = BASE / "rules.json"
+REGEX_FILE = BASE / "regex_patterns.json"
+LEXICA_DIR = BASE / "lexica"
+PIPE_CFG_FILE = BASE / "pipeline_config.json"
+
+def _load_json(p): 
+    with open(p, "r", encoding="utf8") as f: return json.load(f)
+
+def _load_lexicon():
+    lex = {}
+    if not LEXICA_DIR.exists(): return lex
+    for p in LEXICA_DIR.glob("*.json"):
+        d = _load_json(p)
+        for token, info in d.items():
+            t = token.lower()
+            if t not in lex or info.get("confidence",0) > lex[t].get("confidence",0):
+                lex[t] = info
+    return lex
+
+def _compile_regexes():
+    raw = _load_json(REGEX_FILE)
+    return {k: re.compile(v["pattern"], flags=re.IGNORECASE) for k,v in raw.items() if "pattern" in v}
+
+def _normalize_once(text, rules, lexicon, regexes, pipe_cfg):
+    # very light pass mirroring training-time normalization expectations
+    tokens = re.findall(r"[^\s]+", text)
+    out = []
+    prev = None
+    # high-priority: lexicon mapping
+    for tok in tokens:
+        t_low = tok.lower()
+        if t_low in lexicon:
+            out.append(lexicon[t_low]["to"])
+            prev = out[-1]
+            continue
+        # collapse elongations like training
+        el = regexes.get("ELONGATION_COLLAPSE")
+        if el:
+            newtok = el.sub(_load_json(REGEX_FILE)["ELONGATION_COLLAPSE"]["replacement"], tok)
+            tok = newtok
+        out.append(tok)
+        prev = tok
+    return " ".join(out)
+
+# Cache normalizer assets
+_NORMALIZER = {"loaded": False}
+def normalize_input(text):
+    if not _NORMALIZER["loaded"]:
+        _NORMALIZER["rules"] = _load_json(RULES_FILE)
+        _NORMALIZER["lexicon"] = _load_lexicon()
+        _NORMALIZER["regexes"] = _compile_regexes()
+        _NORMALIZER["pipe_cfg"] = _load_json(PIPE_CFG_FILE)
+        _NORMALIZER["loaded"] = True
+    return _normalize_once(text, _NORMALIZER["rules"], _NORMALIZER["lexicon"], _NORMALIZER["regexes"], _NORMALIZER["pipe_cfg"])
+
 def clean_adapter_config(config_path):
     """
     Clean the adapter config to remove unsupported fields for compatibility
@@ -185,7 +246,7 @@ def main():
     print("🔄 Starting baseline translation process...")
     
     # Check if model directory exists
-    model_path = "fine-tuned-mbart-tl2en-baseline-best"
+    model_path = "fine-tuned-mbart-tl2en-best"
     if not os.path.exists(model_path):
         print(f"⚠️  Baseline model directory '{model_path}' not found!")
         print("🔄 Trying alternative baseline model directory...")
@@ -195,22 +256,55 @@ def main():
             print("💡 To train the baseline model, run: python model_training_baseline.py")
             return
     
+    # # Check if the model has the necessary files
+    # required_files = ["adapter_config.json", "adapter_model.safetensors"]
+    # missing_files = [f for f in required_files if not os.path.exists(os.path.join(model_path, f))]
+    
+    # if missing_files:
+    #     print(f"⚠️  Baseline model is missing required files: {missing_files}")
+    #     print("🔄 This suggests the model wasn't fully trained or saved properly.")
+    #     print("💡 To fix this, retrain the baseline model: python model_training_baseline.py")
+    #     return
+    
+    # print(f"✅ Baseline model directory '{model_path}' has all required files")
     # Check if the model has the necessary files
-    required_files = ["adapter_config.json", "adapter_model.safetensors"]
-    missing_files = [f for f in required_files if not os.path.exists(os.path.join(model_path, f))]
-    
-    if missing_files:
-        print(f"⚠️  Baseline model is missing required files: {missing_files}")
+    required_files = ["adapter_config.json"]
+    # Check for either safetensors or pytorch_model.bin
+    model_file = None
+    if os.path.exists(os.path.join(model_path, "adapter_model.safetensors")):
+        model_file = "adapter_model.safetensors"
+    elif os.path.exists(os.path.join(model_path, "pytorch_model.bin")):
+        model_file = "pytorch_model.bin"
+    else:
+        print("⚠️  No model file found (neither adapter_model.safetensors nor pytorch_model.bin)")
         print("🔄 This suggests the model wasn't fully trained or saved properly.")
-        print("💡 To fix this, retrain the baseline model: python model_training_baseline.py")
+        print("💡 To fix this, retrain the model: python model_training_enhanced.py")
         return
-    
-    print(f"✅ Baseline model directory '{model_path}' has all required files")
+
+    missing_files = [f for f in required_files if not os.path.exists(os.path.join(model_path, f))]
+
+    if missing_files:
+        print(f"⚠️  Model is missing required files: {missing_files}")
+        print("🔄 This suggests the model wasn't fully trained or saved properly.")
+        print("💡 To fix this, retrain the model: python model_training_enhanced.py")
+        return
+
+    print(f"✅ Model directory '{model_path}' has all required files")
+    print(f"📁 Using model file: {model_file}")
     
     print(f"🔧 Using baseline model directory: {model_path}")
+
+    normalized_text = normalize_input(filipino_text)
+    # inputs = tokenizer(
+    #     normalized_text,
+    #     return_tensors="pt",
+    #     padding=True,
+    #     truncation=True,
+    #     max_length=128
+    # )
     
     # Translate
-    english_translation = translate_filipino_to_english_baseline(filipino_text, model_path)
+    english_translation = translate_filipino_to_english_baseline(normalized_text, model_path)
     
     if english_translation:
         print(f"🇺🇸 English (Baseline): {english_translation}")
