@@ -30,37 +30,37 @@ def clean_tweet_text(text):
 
 def main():
     """
-    Main function to read, process, and save the data.
+    Main function to read, process, and save the data from all JSON files in the dataset directory.
     """
-    # Define file paths
-    # Assumes the script is in 'python-script' and the data is in 'apify' at the same level
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(script_dir)
-    json_file_path = os.path.join(project_root, 'apify', 'dataset_tweettaglish-extraction---remaining-links-part-5_2025-08-14_01-05-28-859.json')
+    dataset_dir = os.path.join(project_root, 'dataset')
     output_csv_path = os.path.join(script_dir, 'init-preprocess', 'cleaned_tweets.csv')
     os.makedirs(os.path.dirname(output_csv_path), exist_ok=True)
 
-    try:
-        with open(json_file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-    except FileNotFoundError:
-        print(f"Error: The file was not found at {json_file_path}")
-        return
-    except json.JSONDecodeError:
-        print(f"Error: Could not decode JSON from the file {json_file_path}")
-        return
-
     cleaned_texts = []
-    for record in data:
-        if 'text' in record and record['text']:
-            cleaned_text = clean_tweet_text(record['text'])
-            if len(cleaned_text.split()) > 2:
-                cleaned_texts.append(cleaned_text)
+
+    # Process all .json files in the dataset directory
+    for filename in os.listdir(dataset_dir):
+        if filename.endswith('.json'):
+            json_file_path = os.path.join(dataset_dir, filename)
+            try:
+                with open(json_file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                print(f"Error reading {json_file_path}, skipping.")
+                continue
+
+            for record in data:
+                if 'text' in record and record['text']:
+                    cleaned_text = clean_tweet_text(record['text'])
+                    if len(cleaned_text.split()) > 2:
+                        cleaned_texts.append(cleaned_text)
 
     if cleaned_texts:
         df = pd.DataFrame(cleaned_texts, columns=['src'])
         df.to_csv(output_csv_path, index=False, encoding='utf-8')
-        print(f"Successfully processed {len(cleaned_texts)} records.")
+        print(f"Successfully processed {len(cleaned_texts)} records from all JSON files.")
         print(f"Cleaned data saved to {output_csv_path}")
     else:
         print("No valid text data found to process.")
