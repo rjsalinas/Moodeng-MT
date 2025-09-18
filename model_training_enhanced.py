@@ -423,9 +423,9 @@ def load_and_enhance_dataset():
     
     try:
         # 0) Prefer a pre-computed enhanced dataset to skip CalamanCy at train time
-        if os.path.exists("full_enhanced_parallel_corpus.csv"):
-            print("📁 Found precomputed enhanced dataset: full_enhanced_parallel_corpus.csv")
-            df = pd.read_csv("full_enhanced_parallel_corpus.csv")
+        if os.path.exists("filipino_english_parallel_corpus.csv"):
+            print("📁 Found precomputed enhanced dataset: filipino_english_parallel_corpus.csv")
+            df = pd.read_csv("filipino_english_parallel_corpus.csv")
             expected_cols = {"src", "tgt", "complexity_score", "quality_score"}
             if not {"src", "tgt"}.issubset(df.columns):
                 print("⚠️  Enhanced file missing src/tgt; attempting to map columns...")
