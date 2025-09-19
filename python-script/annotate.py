@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 try:
     API_KEY = os.environ.get("GOOGLE_API_KEY")
-    genai.configure(api_key=API_KEY)
+    genai.configure(api_key="AIzaSyDPnsQuJPsW1f9bOzBSQjoUhddS3Emm41M")
 except TypeError:
     print("\nERROR: GOOGLE_API_KEY environment variable not set.")
     print("Please set your API key and restart the script.\n")
@@ -120,7 +120,7 @@ def process_csv_in_batches(input_csv_path, output_csv_path, source_column, targe
 
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    INPUT_FILE = os.path.join(script_dir, 'init-preprocess', 'preprocessed.csv') # Change to cleaned_tweets.csv for FULL DATASET
+    INPUT_FILE = os.path.join(script_dir, 'init-preprocess', 'cleaned_tweets.csv') # Change to cleaned_tweets.csv for FULL DATASET
     OUTPUT_FILE = os.path.join(script_dir, 'annotated-preprocess', 'translated_tweets.csv')
     SOURCE_TEXT_COLUMN = 'src'
     TARGET_TEXT_COLUMN = 'tgt'
