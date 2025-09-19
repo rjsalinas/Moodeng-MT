@@ -71,7 +71,7 @@ def translate_tweet_batch(tweets_list):
         print(f"  [!] An unexpected error occurred: {e}")
         return {}
 
-def process_csv_in_batches(input_csv_path, output_csv_path, source_column, target_column, batch_size=25):
+def process_csv_in_batches(input_csv_path, output_csv_path, source_column, target_column, batch_size=50):
     """
     Reads a CSV, translates a specified column in batches, and saves the results.
     """
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     OUTPUT_FILE = os.path.join(script_dir, 'annotated-preprocess', 'translated_tweets.csv')
     SOURCE_TEXT_COLUMN = 'src'
     TARGET_TEXT_COLUMN = 'tgt'
-    BATCH_SIZE = 25
+    BATCH_SIZE = 50
 
     process_csv_in_batches(
         input_csv_path=INPUT_FILE,
