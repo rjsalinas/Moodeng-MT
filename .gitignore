@@ -326,5 +326,12 @@ scheduler_state/
 *.bpe
 
 dataset
-init-preprocess
-annotated-preprocess
+init-preprocess/*
+annotated-preprocess/*
+python-script/annotated-preprocess/find_duplicate.sh
+python-script/annotated-preprocess/translated_tweets_bak.csv
+python-script/init-preprocess/cleaned_tweets.csv
+python-script/init-preprocess/preprocessed.csv
+python-script/annotated-preprocess/translated_tweets.csv
+
+corpus-parallel-txt/*

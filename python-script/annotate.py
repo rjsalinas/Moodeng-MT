@@ -7,17 +7,17 @@ from tqdm import tqdm
 
 try:
     API_KEY = os.environ.get("GOOGLE_API_KEY")
-    genai.configure(api_key="AIzaSyCwWusgYSLJ5vjb6ZNfx_Be5Znykyhv0CE")
+    genai.configure(api_key="<API_KEY>")
 except TypeError:
     print("\nERROR: GOOGLE_API_KEY environment variable not set.")
     print("Please set your API key and restart the script.\n")
     exit()
 
 generation_config = {
-  "temperature": 0.4,
+#   "temperature": 0.4,
   "top_p": 1,
   "top_k": 1,
-  "max_output_tokens": 2048,
+#   "max_output_tokens": 2048,
 }
 
 safety_settings = [
@@ -39,7 +39,7 @@ def create_batch_prompt(tweets_list):
     prompt = f"""
     You are an expert linguist and translator, fluent in both English and Filipino, specializing in modern internet slang (Taglish). Your task is to translate a batch of Taglish tweets into natural, grammatically correct, and semantically equivalent English sentences. Preserve the original sentiment and meaning.
 
-    Your response MUST be a single, valid JSON object.
+    IMPORTANT: Your response MUST be a single, valid JSON object.
     The keys of the JSON object should be the original numbers of the tweets (as strings, e.g., "1", "2").
     The values should be the corresponding English translations.
 
