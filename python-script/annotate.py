@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 try:
     API_KEY = os.environ.get("GOOGLE_API_KEY")
-    genai.configure(api_key="AIzaSyDPnsQuJPsW1f9bOzBSQjoUhddS3Emm41M")
+    genai.configure(api_key="AIzaSyCwWusgYSLJ5vjb6ZNfx_Be5Znykyhv0CE")
 except TypeError:
     print("\nERROR: GOOGLE_API_KEY environment variable not set.")
     print("Please set your API key and restart the script.\n")
