@@ -329,6 +329,7 @@ dataset
 init-preprocess/*
 annotated-preprocess/*
 python-script/annotated-preprocess/find_duplicate.sh
+python-script/annotated-preprocess/annotations_temp.csv
 python-script/annotated-preprocess/translated_tweets_bak.csv
 python-script/init-preprocess/cleaned_tweets.csv
 python-script/init-preprocess/preprocessed.csv
