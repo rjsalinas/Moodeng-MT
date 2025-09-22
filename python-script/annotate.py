@@ -3,6 +3,7 @@ import google.generativeai as genai
 import os
 import json
 import time
+from datetime import datetime
 from tqdm import tqdm
 
 try:
@@ -50,28 +51,53 @@ def create_batch_prompt(tweets_list):
     """
     return prompt
 
-def translate_tweet_batch(tweets_list):
-    """Sends a batch of tweets to the Gemini API and parses the JSON response."""
+def translate_tweet_batch(tweets_list, max_retries=3, backoff_seconds=2.0):
+    """Sends a batch of tweets to the Gemini API and parses the JSON response.
+
+    Returns a tuple: (translations_dict, last_raw_response_text_or_none).
+    """
     if not tweets_list:
-        return {}
+        return {}, None
 
     prompt = create_batch_prompt(tweets_list)
-    
-    try:
-        response = model.generate_content(prompt)
-        cleaned_response = response.text.strip().replace("```json", "").replace("```", "").strip()
-        
-        translations = json.loads(cleaned_response)
-        return translations
-        
-    except json.JSONDecodeError:
-        print(f"  [!] Failed to decode JSON from response:\n--- RESPONSE START ---\n{response.text}\n--- RESPONSE END ---")
-        return {}
-    except Exception as e:
-        print(f"  [!] An unexpected error occurred: {e}")
-        return {}
+    last_raw_response = None
 
-def process_csv_in_batches(input_csv_path, output_csv_path, source_column, target_column, batch_size=50):
+    for attempt_number in range(1, max_retries + 1):
+        try:
+            response = model.generate_content(prompt)
+            raw_text = response.text if getattr(response, "text", None) else str(response)
+            cleaned_response = raw_text.strip().replace("```json", "").replace("```", "").strip()
+            translations = json.loads(cleaned_response)
+            return translations, None
+        except json.JSONDecodeError:
+            last_raw_response = raw_text if 'raw_text' in locals() else last_raw_response
+            print(f"  [!] JSONDecodeError on attempt {attempt_number}/{max_retries}.")
+        except Exception as e:
+            last_raw_response = raw_text if 'raw_text' in locals() else last_raw_response
+            print(f"  [!] API error on attempt {attempt_number}/{max_retries}: {e}")
+
+        if attempt_number < max_retries:
+            sleep_seconds = backoff_seconds * (2 ** (attempt_number - 1))
+            time.sleep(sleep_seconds)
+
+    if last_raw_response is not None:
+        print(f"  [!] Failed to decode/parse after {max_retries} attempts. Last response shown below.\n--- RESPONSE START ---\n{last_raw_response}\n--- RESPONSE END ---")
+    return {}, last_raw_response
+
+def _append_failed_log(log_csv_path, record_dict):
+    """Append a failure record to a CSV log, creating the file with header if needed."""
+    os.makedirs(os.path.dirname(log_csv_path), exist_ok=True)
+    columns = list(record_dict.keys())
+    file_exists = os.path.exists(log_csv_path)
+    df_row = pd.DataFrame([record_dict], columns=columns)
+    if file_exists:
+        # append without header
+        df_row.to_csv(log_csv_path, mode='a', header=False, index=False)
+    else:
+        df_row.to_csv(log_csv_path, mode='w', header=True, index=False)
+
+
+def process_csv_in_batches(input_csv_path, output_csv_path, source_column, target_column, batch_size=50, failed_log_csv_path=None):
     """
     Reads a CSV, translates a specified column in batches, and saves the results.
     """
@@ -82,6 +108,10 @@ def process_csv_in_batches(input_csv_path, output_csv_path, source_column, targe
         df[target_column] = ""
 
     print(f"Starting translation process for column '{source_column}'...")
+
+    # Prepare failed log path
+    if failed_log_csv_path is None:
+        failed_log_csv_path = os.path.join(os.path.dirname(output_csv_path), 'failed_batches.csv')
     
     for i in tqdm(range(0, len(df), batch_size), desc="Processing Batches"):
         batch_end = min(i + batch_size, len(df))
@@ -93,10 +123,27 @@ def process_csv_in_batches(input_csv_path, output_csv_path, source_column, targe
             # print(f"Batch {i//batch_size + 1}: Skipping, all tweets already translated.")
             continue
             
-        translations_dict = translate_tweet_batch(tweets_to_translate)
-        
+        translations_dict, last_response_text = translate_tweet_batch(tweets_to_translate)
+
         if not translations_dict:
             print(f"  [!] Warning: Received no valid translations for batch starting at index {i}.")
+            # Log failure details for targeted reprocessing
+            failed_row_indices = [idx for idx, row in batch_df.iterrows() if pd.isnull(row[target_column]) or row[target_column] == ""]
+            _append_failed_log(
+                failed_log_csv_path,
+                {
+                    "timestamp": datetime.utcnow().isoformat() + "Z",
+                    "batch_start_index": i,
+                    "batch_end_index": batch_end,
+                    "num_requested": len(tweets_to_translate),
+                    "num_returned": 0,
+                    "row_indices": "|".join(map(str, failed_row_indices)),
+                    "reason": "empty_translations",
+                },
+            )
+            # Immediate checkpoint save
+            os.makedirs(os.path.dirname(output_csv_path), exist_ok=True)
+            df.to_csv(output_csv_path, index=False)
             continue
 
         current_tweet_index = 0
