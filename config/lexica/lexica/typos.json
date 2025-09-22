@@ -1,4 +1,8 @@
 {
+  "metadata": {
+    "stage": 3,
+    "description": "Stage 3 – Lexicon mappings (typos and micro-fixes)"
+  },
   "hace": {"to": "have", "source":"user_list", "confidence": 0.95},
   "peraan": {"to": "perahan", "source":"user_list", "confidence": 0.6},
   "grammnys": {"to": "grammys", "source":"user_list", "confidence": 0.9},

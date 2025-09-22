@@ -1,8 +1,67 @@
 {
+  "metadata": {
+    "stage": 1,
+    "description": "Stage 1 – Sentence-level regex patterns applied before token rules"
+  },
   "ELONGATION_COLLAPSE": {
     "pattern": "(.)\\1{2,}",
     "replacement": "\\1",
     "description": "Collapse expressive elongation (3+ repeated chars -> single char). Use precondition to avoid removing true reduplication."
+  },
+  "DIBA_EXPAND": {
+    "pattern": "\\b(d'i?ba|di'ba|dba)\\b",
+    "replacement": "hindi ba",
+    "description": "Expand d'ba/di'ba/diba to 'hindi ba'"
+  },
+  "AFFIX_HYPHEN_PAGKA": {
+    "pattern": "\\bpagka\\s+(?=[A-Za-z])",
+    "replacement": "pagka-",
+    "description": "Insert hyphen after 'pagka' when followed by a word"
+  },
+  "NAGREPLY_HYPHEN": {
+    "pattern": "\\bnagreply\\b",
+    "replacement": "nag-reply",
+    "description": "Normalize 'nagreply' to 'nag-reply'"
+  },
+  "NANAMAN_SPLIT": {
+    "pattern": "\\bnanaman\\b",
+    "replacement": "na naman",
+    "description": "Split 'nanaman' to 'na naman'"
+  },
+  "KO_NGA_SPLIT": {
+    "pattern": "\\bko'nga\\b",
+    "replacement": "ko nga",
+    "description": "Split ko'nga to ko nga"
+  },
+  "NALANG_SPLIT": {
+    "pattern": "\\bnalang\\b",
+    "replacement": "na lang",
+    "description": "Split nalang to na lang"
+  },
+  "AFFIX_HYPHEN_NAKA": {
+    "pattern": "\\bnaka\\s+(?=[A-Za-z])",
+    "replacement": "naka-",
+    "description": "Insert hyphen after 'naka'"
+  },
+  "AFFIX_HYPHEN_MAG": {
+    "pattern": "\\bmag\\s+(?=[A-Za-z])",
+    "replacement": "mag-",
+    "description": "Insert hyphen after 'mag'"
+  },
+  "AFFIX_HYPHEN_I": {
+    "pattern": "\\bi\\s+(?=[A-Za-z])",
+    "replacement": "i-",
+    "description": "Insert hyphen after 'i' (imperative prefix)"
+  },
+  "RUSHHOUR_SPLIT": {
+    "pattern": "\\brushhour\\b",
+    "replacement": "rush hour",
+    "description": "Split rushhour"
+  },
+  "KANA_SPLIT": {
+    "pattern": "\\bkana\\b",
+    "replacement": "ka na",
+    "description": "Split kana to ka na"
   },
   "VOWEL_CLIPPING": {
     "pattern": "([aeiou])\\1+",

@@ -1,6 +1,10 @@
 {
+  "metadata": {
+    "stage": 3,
+    "description": "Stage 3 – Lexicon mappings (slang, abbreviations, variants)"
+  },
   "tas": {"to": "tapos", "source":"user_list", "confidence": 0.95},
-  "gg": {"to": "good game", "source":"user_list", "confidence": 0.9},
+  
   "oa": {"to": "overacting", "source":"user_list", "confidence": 0.6},
   "te": {"to": "te (addressing)", "source":"user_list", "confidence": 0.6},
   "mwuaps": {"to": "mwuaps (term)", "source":"user_list", "confidence": 0.6},
@@ -15,9 +19,37 @@
   "cla": {"to": "sila", "source":"user_list", "confidence": 0.8},
   "beki": {"to": "beki", "source":"user_list", "confidence": 0.6},
   "beke": {"to": "baka", "source":"user_list", "confidence": 0.6},
-  "nemen": {"to": "naman", "source":"user_list", "confidence": 0.8},
+  "nemen": {"to": "naman", "source":"user_list", "confidence": 0.9},
   "beks": {"to": "beks", "source":"user_list", "confidence": 0.7},
-  "shurikats": {"to": "shurikat (slang)", "source":"user_list", "confidence": 0.5}
+  "shurikats": {"to": "shurikat (slang)", "source":"user_list", "confidence": 0.5},
+  "amputa": {"to": "", "source":"user_list", "confidence": 0.99, "type": "profanity"},
+  "ky": {"to": "kay", "source":"user_list", "confidence": 0.95},
+  "nya": {"to": "niya", "source":"user_list", "confidence": 0.95},
+  "wla": {"to": "wala", "source":"user_list", "confidence": 0.95},
+  "ung": {"to": "yung", "source":"user_list", "confidence": 0.93},
+  "un": {"to": "yun", "source":"user_list", "confidence": 0.93},
+  "syang": {"to": "siyang", "source":"user_list", "confidence": 0.95},
+  "nyo": {"to": "niyo", "source":"user_list", "confidence": 0.95},
+  "ikay": {"to": "ika'y", "source":"user_list", "confidence": 0.9},
+  "hndi": {"to": "hindi", "source":"user_list", "confidence": 0.98},
+  "hnd": {"to": "hindi", "source":"user_list", "confidence": 0.98},
+  "nd": {"to": "hindi", "source":"user_list", "confidence": 0.95},
+  "s": {"to": "sa", "source":"user_list", "confidence": 0.95},
+  "p": {"to": "pa", "source":"user_list", "confidence": 0.95},
+  
+  "kau": {"to": "kayo", "source":"user_list", "confidence": 0.95},
+  "tlga": {"to": "talaga", "source":"user_list", "confidence": 0.95},
+  "sbi": {"to": "sabi", "source":"user_list", "confidence": 0.95},
+  "lam": {"to": "alam", "source":"user_list", "confidence": 0.95},
+  "pedeng": {"to": "pwedeng", "source":"user_list", "confidence": 0.95},
+  "pls": {"to": "please", "source":"user_list", "confidence": 0.95},
+  "x": {"to": "siya", "source":"user_list", "confidence": 0.8},
+  "ganyan": {"to": "ganiyan", "source":"user_list", "confidence": 0.8},
+  "k": [
+    {"to": "ka", "confidence": 0.98, "precondition": "prev_token in ['di','hindi']"},
+    {"to": "ko", "confidence": 0.95, "precondition": "next_token_starts_with_vowel"},
+    {"to": "ko", "confidence": 0.60}
+  ]
 }
 
 
