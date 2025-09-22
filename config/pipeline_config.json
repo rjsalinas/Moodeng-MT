@@ -1,6 +1,7 @@
 {
   "morphology_backend": "calamancy",
   "auto_apply_min_confidence": 0.9,
+  "lowercase": true,
   "family_order": [
     "repetition_deletion",
     "slang_to_standard",
