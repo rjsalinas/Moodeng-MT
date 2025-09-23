@@ -4,10 +4,11 @@ import sys
 import tempfile
 from datetime import datetime
 from typing import List, Optional, Tuple
+from datasets import load_dataset, Dataset, DatasetDict
 
 import pandas as pd
 
-
+HF_REPO_ID = "propanda02/TweetTaglish-SalinTala"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CORPUS_DIR = os.path.join(PROJECT_ROOT, "corpus-parallel-txt")
 WORK_DIR = os.path.join(PROJECT_ROOT, "python-script", "annotated-preprocess")
@@ -19,7 +20,7 @@ def _read_parallel_files(
 ) -> pd.DataFrame:
     """Read parallel cleaned files for a given split into a DataFrame.
 
-    Columns: id, filipino (tl), english_mt (en)
+    Columns: row_id, id, filipino (tl), english_mt (en)
     """
     if split not in {"train", "val"}:
         raise ValueError("split must be one of: train, val")
@@ -59,19 +60,61 @@ def _read_parallel_files(
         )
 
     df = pd.concat([tl, en], axis=1)
-    df.insert(0, "id", [f"{split}-{i}" for i in range(len(df))])
+    # Add row_id as auto-incremented identifier starting from 1
+    df.insert(0, "row_id", range(1, len(df) + 1))
+    # Add original id format for compatibility
+    df.insert(1, "id", [f"{split}-{i}" for i in range(len(df))])
     return df
 
+def load_from_huggingface(splits: Optional[List[str]] = None) -> pd.DataFrame:
+    """Load dataset from Hugging Face Hub with enhanced row identification."""
+    print(f"Loading dataset from Hugging Face: {HF_REPO_ID}")
+    
+    chosen_splits = splits or ["train", "validation"]
 
-def load_corpora(splits: Optional[List[str]]) -> pd.DataFrame:
-    """Load one or multiple splits; default is all available splits."""
-    chosen = splits or ["train", "val"]
-    frames: List[pd.DataFrame] = []
-    for sp in chosen:
-        frames.append(_read_parallel_files(sp))
-    df = pd.concat(frames, ignore_index=True)
+    all_data = []
+    global_row_id = 1  # Global counter for row_id across splits
+    
+    for split_name in chosen_splits:
+        split_data = load_dataset(HF_REPO_ID, split=split_name)
+        split_df = split_data.to_pandas()
+        split_df['filipino'] = split_df['translation'].apply(lambda x: x['tl'])
+        split_df['english_mt'] = split_df['translation'].apply(lambda x: x['en'])
+        
+        # Add row_id as auto-incremented identifier
+        split_df['row_id'] = range(global_row_id, global_row_id + len(split_df))
+        global_row_id += len(split_df)
+        
+        # Add original id format for compatibility
+        split_df['id'] = [f"{split_name}-{i}" for i in range(len(split_df))]
+        split_df = split_df[['row_id', 'id', 'filipino', 'english_mt']]
+        all_data.append(split_df)
+
+    df = pd.concat(all_data, ignore_index=True)
+    print(f"Loaded {len(df)} sentences from Hugging Face (row_id: 1-{len(df)})")
     return df
 
+def load_corpora(source: str = "local", splits: Optional[List[str]] = None) -> pd.DataFrame:
+    """Load corpora from either local files or Hugging Face."""
+    if source == "hf":
+        return load_from_huggingface(splits)
+    elif source == "local":
+        chosen = splits or ["train", "val"]
+        frames: List[pd.DataFrame] = []
+        global_row_id = 1  # Global counter for row_id across splits
+        
+        for sp in chosen:
+            split_df = _read_parallel_files(sp)
+            # Update row_id to be globally unique
+            split_df['row_id'] = range(global_row_id, global_row_id + len(split_df))
+            global_row_id += len(split_df)
+            frames.append(split_df)
+            
+        df = pd.concat(frames, ignore_index=True)
+        print(f"Loaded {len(df)} sentences from local files (row_id: 1-{len(df)})")
+        return df
+    else:
+        raise ValueError("source must be either 'local' or 'hf'")
 
 def flag_suspicious_translations(df: pd.DataFrame) -> pd.DataFrame:
     """Flag translations that might need human review.
@@ -132,8 +175,13 @@ def get_final_annotation_path() -> str:
 
 def _load_existing_annotations(path: str) -> pd.DataFrame:
     if os.path.exists(path):
-        return pd.read_csv(path, dtype=str, keep_default_na=False)
-    return pd.DataFrame(columns=["id", "filipino", "english_mt", "english_final", "was_edited", "flag_reasons"])  # type: ignore
+        df = pd.read_csv(path, dtype=str, keep_default_na=False)
+        # Ensure row_id column exists and is properly typed
+        if 'row_id' not in df.columns and 'id' in df.columns:
+            # Try to extract row_id from id format (split-number)
+            df['row_id'] = df['id'].str.extract(r'-(\d+)$')[0].astype(int) + 1
+        return df
+    return pd.DataFrame(columns=["row_id", "id", "filipino", "english_mt", "english_final", "was_edited", "flag_reasons"])  # type: ignore
 
 
 def manual_annotation_interface(df_flagged: pd.DataFrame, temp_path: str) -> pd.DataFrame:
@@ -152,7 +200,7 @@ def manual_annotation_interface(df_flagged: pd.DataFrame, temp_path: str) -> pd.
             continue
 
         print(f"\n--- Sentence {len(annotated_rows) + 1}/{total} ---")
-        print(f"ID: {row['id']}")
+        print(f"Row ID: {row['row_id']} | ID: {row['id']}")
         print(f"Filipino: {row['filipino']}")
         print(f"MT Output: {row['english_mt']}")
         if "flag_reasons" in row and isinstance(row["flag_reasons"], str) and row["flag_reasons"]:
@@ -181,6 +229,7 @@ def manual_annotation_interface(df_flagged: pd.DataFrame, temp_path: str) -> pd.
 
         annotated_rows.append(
             {
+                "row_id": row["row_id"],
                 "id": row["id"],
                 "filipino": row["filipino"],
                 "english_mt": row["english_mt"],
@@ -205,7 +254,7 @@ def manual_annotation_interface(df_flagged: pd.DataFrame, temp_path: str) -> pd.
 
 
 def cmd_flag(args: argparse.Namespace) -> None:
-    df = load_corpora(args.splits)
+    df = load_corpora(source=args.source, splits=args.splits)
     df = flag_suspicious_translations(df)
     flagged = df[df.get("needs_review", False) == True]  # noqa: E712
 
@@ -219,8 +268,11 @@ def _choose_source_for_annotation(args: argparse.Namespace) -> pd.DataFrame:
     # Prefer explicitly provided CSV of flagged items, else recompute on-the-fly
     if args.flagged_csv and os.path.exists(args.flagged_csv):
         df = pd.read_csv(args.flagged_csv, dtype=str, keep_default_na=False)
+        # Ensure row_id exists
+        if 'row_id' not in df.columns and 'id' in df.columns:
+            df['row_id'] = df['id'].str.extract(r'-(\d+)$')[0].astype(int) + 1
     else:
-        df_all = load_corpora(args.splits)
+        df_all = load_corpora(source=args.source, splits=args.splits)
         df = flag_suspicious_translations(df_all)
         df = df[df.get("needs_review", False) == True]  # noqa: E712
     return df.reset_index(drop=True)
@@ -249,6 +301,8 @@ def cmd_stats(args: argparse.Namespace) -> None:
     print(f"Total annotated: {total}")
     print(f"Kept MT output: {kept}")
     print(f"Edited by human: {edited}")
+    if 'row_id' in df.columns:
+        print(f"Row ID range: {df['row_id'].min()}-{df['row_id'].max()}")
 
 
 def _merge_with_existing(final_path: str, additions: pd.DataFrame) -> pd.DataFrame:
@@ -272,10 +326,118 @@ def cmd_export(args: argparse.Namespace) -> None:
     merged.to_csv(final_path, index=False)
     print(f"Exported merged annotations to {final_path}")
 
+def push_annotations_to_hf(
+    annotations_df: pd.DataFrame,
+    repo_id: str = HF_REPO_ID,
+    splits: Optional[List[str]] = None,
+    branch: str = "annotations"
+) -> None:
+    """Push annotated data back to Hugging Face Hub, keeping splits intact.
+    
+    SAFETY: Always pushes to a non-main branch to prevent accidental overwrites.
+    Uses a consistent 'annotations' branch for all pushes.
+    """
+    # Safety check: never push to main/master branch
+    if branch.lower() in ["main", "master"]:
+        branch = "annotations"
+        print(f"⚠️  Safety override: Changed branch to 'annotations' to protect main branch")
+    
+    print(f"🚀 Pushing annotations to {repo_id}@{branch}...")
+    print(f"📝 Total annotations to push: {len(annotations_df)}")
+
+    splits = splits or ["train", "validation"]
+
+    # Load the existing dataset from main branch
+    try:
+        dataset_dict = load_dataset(repo_id)
+    except Exception as e:
+        print(f"❌ Failed to load dataset {repo_id}: {e}")
+        return
+
+    updated_splits = {}
+
+    for split in splits:
+        if split not in dataset_dict:
+            print(f"⚠️ Split '{split}' not found in repo, skipping.")
+            continue
+
+        # Load split as pandas and add synthetic id
+        split_ds = dataset_dict[split].to_pandas()
+        split_ds["id"] = [f"{split}-{i}" for i in range(len(split_ds))]
+
+        # Annotated rows for this split
+        split_annotations = annotations_df[annotations_df["id"].str.startswith(split)]
+
+        if split_annotations.empty:
+            print(f"ℹ️  No annotations for split '{split}', keeping original.")
+            updated_splits[split] = split_ds
+            continue
+
+        print(f"📊 Found {len(split_annotations)} annotations for split '{split}'")
+
+        # Merge annotations
+        merged = split_ds.merge(
+            split_annotations[["id", "english_final"]],
+            on="id",
+            how="left",
+            suffixes=("", "_annot"),
+        )
+        # Use human edit if present, else MT
+        merged["en"] = merged["english_final"].fillna(merged["translation"].apply(lambda x: x["en"]))
+        merged["tl"] = merged["translation"].apply(lambda x: x["tl"])
+
+        # Back to HF format
+        updated_splits[split] = pd.DataFrame({
+            "translation": merged.apply(lambda r: {"tl": r["tl"], "en": r["en"]}, axis=1)
+        })
+
+    # Convert to DatasetDict
+    hf_ready = DatasetDict({
+        split: Dataset.from_pandas(df.reset_index(drop=True)) for split, df in updated_splits.items()
+    })
+
+    # Push to the annotations branch (creates it if it doesn't exist)
+    try:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        commit_msg = f"Update annotations - {len(annotations_df)} total annotations ({timestamp})"
+        
+        hf_ready.push_to_hub(
+            repo_id, 
+            private=False, 
+            commit_message=commit_msg, 
+            revision=branch
+        )
+        print(f"✅ Successfully pushed annotations to {repo_id}@{branch}")
+        print(f"📈 Updated with {len(annotations_df)} annotations")
+        print(f"🔗 View your changes at: https://huggingface.co/datasets/{repo_id}/tree/{branch}")
+    except Exception as e:
+        print(f"❌ Failed to push to Hugging Face: {e}")
+
+
+def cmd_sync_hf(args: argparse.Namespace) -> None:
+    """Sync local annotations with Hugging Face."""
+    if args.direction == "pull":
+        print("📥 Pulling latest data from Hugging Face...")
+        df = load_from_huggingface(splits=args.splits)
+        local_path = get_final_annotation_path()
+        df.to_csv(local_path, index=False)
+        print(f"💾 Saved to: {local_path}")
+    elif args.direction == "push":
+        final_path = get_final_annotation_path()
+        if not os.path.exists(final_path):
+            print(f"❌ No annotations found at {final_path}")
+            return
+        
+        df = pd.read_csv(final_path, dtype=str, keep_default_na=False)
+        
+        print(f"🛡️  Safety mode: Pushing to 'annotations' branch (not main)")
+        push_annotations_to_hf(df, branch="annotations", splits=args.splits)
+    else:
+        print("❌ Invalid direction. Use 'pull' or 'push'")
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="CLI for flagging and annotating translations without touching final cleaned corpora.",
+        description="CLI for flagging and annotating translations with enhanced row identification.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -334,6 +496,28 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     p_export.set_defaults(func=cmd_export)
 
+    parser.add_argument(
+        "--source",
+        choices=["local", "hf"],
+        default="local",
+        help="Data source: 'local' for local files, 'hf' for Hugging Face",
+    )
+
+    p_sync = sub.add_parser("sync", help="Sync with Hugging Face Hub")
+    p_sync.add_argument(
+        "direction",
+        choices=["pull", "push"],
+        help="Direction: 'pull' from HF or 'push' to HF",
+    )
+    p_sync.add_argument(
+        "--splits",
+        nargs="+",
+        choices=["train", "validation"],
+        default=None,
+        help="Which splits to load (default: train validation)",
+    )
+    p_sync.set_defaults(func=cmd_sync_hf)
+
     return parser
 
 
@@ -346,5 +530,3 @@ def main(argv: Optional[List[str]] = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-
