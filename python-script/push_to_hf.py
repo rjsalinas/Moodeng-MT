@@ -1,35 +1,37 @@
 from datasets import load_dataset, Dataset, DatasetDict
 import os
 
-# Define the file paths to load the parallel files
-data_files = {
-    'train': {
-        'tl': 'train.tl',
-        'en': 'train.en'
-    },
-    'validation': {
-        'tl': 'val.tl',
-        'en': 'val.en'
-    }
-}
+# Load the parallel text files separately
+print("Loading Tagalog text files...")
+train_tl = load_dataset('text', data_files='corpus-parallel-txt/train.tl.cleaned')['train']
+val_tl = load_dataset('text', data_files='corpus-parallel-txt/val.tl.cleaned')['train']
 
-# Load the data as a raw text dataset
-raw_datasets = load_dataset('text', data_files=data_files)
+print("Loading English text files...")
+train_en = load_dataset('text', data_files='corpus-parallel-txt/train.en.cleaned')['train']
+val_en = load_dataset('text', data_files='corpus-parallel-txt/val.en.cleaned')['train']
 
-# Combine the parallel files into a single dataset with 'translation' feature
-def combine_parallel_corpus(batch):
-    return {'translation': {'tl': batch['tl'], 'en': batch['en']}}
+# Create datasets with translation format
+print("Creating train dataset...")
+train_dataset = Dataset.from_dict({
+    'translation': [
+        {'tl': tl_text, 'en': en_text} 
+        for tl_text, en_text in zip(train_tl['text'], train_en['text'])
+    ]
+})
 
-# Apply the function to create a new, structured dataset
-combined_datasets = raw_datasets.map(
-    combine_parallel_corpus,
-    batched=True,
-    remove_columns=['tl', 'en']
-)
+print("Creating validation dataset...")
+val_dataset = Dataset.from_dict({
+    'translation': [
+        {'tl': tl_text, 'en': en_text} 
+        for tl_text, en_text in zip(val_tl['text'], val_en['text'])
+    ]
+})
 
-# Rename the splits to standard names
-combined_datasets['train'] = combined_datasets['train'].rename_column('translation', 'translation')
-combined_datasets['validation'] = combined_datasets['validation'].rename_column('translation', 'translation')
+# Create the combined dataset dictionary
+combined_datasets = DatasetDict({
+    'train': train_dataset,
+    'validation': val_dataset
+})
 
 # Make sure you are logged in to Hugging Face from your terminal:
 # huggingface-cli login
