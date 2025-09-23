@@ -3,16 +3,17 @@ import os
 
 # Load the parallel text files separately
 print("Loading Tagalog text files...")
-train_tl = load_dataset('text', data_files='corpus-parallel-txt/train.tl.cleaned')['train']
-val_tl = load_dataset('text', data_files='corpus-parallel-txt/val.tl.cleaned')['train']
+train_tl = load_dataset('text', data_files='../corpus-parallel-txt/train.tl.cleaned')['train']
+val_tl = load_dataset('text', data_files='../corpus-parallel-txt/val.tl.cleaned')['train']
 
 print("Loading English text files...")
-train_en = load_dataset('text', data_files='corpus-parallel-txt/train.en.cleaned')['train']
-val_en = load_dataset('text', data_files='corpus-parallel-txt/val.en.cleaned')['train']
+train_en = load_dataset('text', data_files='../corpus-parallel-txt/train.en.cleaned')['train']
+val_en = load_dataset('text', data_files='../corpus-parallel-txt/val.en.cleaned')['train']
 
-# Create datasets with translation format
+# Create datasets with translation format + explicit ID
 print("Creating train dataset...")
 train_dataset = Dataset.from_dict({
+    'id': list(range(len(train_tl))),
     'translation': [
         {'tl': tl_text, 'en': en_text} 
         for tl_text, en_text in zip(train_tl['text'], train_en['text'])
@@ -21,6 +22,7 @@ train_dataset = Dataset.from_dict({
 
 print("Creating validation dataset...")
 val_dataset = Dataset.from_dict({
+    'id': list(range(len(val_tl))),
     'translation': [
         {'tl': tl_text, 'en': en_text} 
         for tl_text, en_text in zip(val_tl['text'], val_en['text'])
@@ -37,11 +39,9 @@ combined_datasets = DatasetDict({
 # huggingface-cli login
 
 # Define the ID of the EXISTING dataset repository on the Hub
-# Replace "your_username/your_dataset_name" with your actual repo ID
 repo_id = "propanda02/TweetTaglish-SalinTala"
 
-# Push the dataset to the Hub
-# The `repo_id` is the only argument needed for an existing repo
+# Push the dataset to the Hub on MAIN branch
 combined_datasets.push_to_hub(repo_id)
 
-print(f"Dataset successfully pushed to https://huggingface.co/datasets/{repo_id}")
+print(f"✅ Dataset successfully pushed to https://huggingface.co/datasets/{repo_id}")
