@@ -36,7 +36,7 @@ combined_datasets['validation'] = combined_datasets['validation'].rename_column(
 
 # Define the ID of the EXISTING dataset repository on the Hub
 # Replace "your_username/your_dataset_name" with your actual repo ID
-repo_id = "your_username/your_dataset_name"
+repo_id = "propanda02/TweetTaglish-SalinTala"
 
 # Push the dataset to the Hub
 # The `repo_id` is the only argument needed for an existing repo
