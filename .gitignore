@@ -336,3 +336,4 @@ python-script/init-preprocess/preprocessed.csv
 python-script/annotated-preprocess/translated_tweets.csv
 
 corpus-parallel-txt/*
+local_annotated_with_ids/
