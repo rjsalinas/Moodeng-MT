@@ -73,6 +73,7 @@ def main():
 
                 if action == 'q':
                     print("Quitting annotation and saving progress...")
+                    updated_translations.append(item)
                     break # Exit the loop
                 # if action is a or enter key, accept
                 elif action == 'a' or action == '':
