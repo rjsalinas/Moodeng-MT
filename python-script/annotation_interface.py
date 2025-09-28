@@ -13,7 +13,7 @@ def main():
     Main function to run the interactive annotation CLI.
     """
     parser = argparse.ArgumentParser(description="Interactive CLI for annotating translations.")
-    parser.add_argument("--repo_id", type=str, default="propanda02/TweetTaglish-SalinTala", help="Hugging Face repository ID.")
+    parser.add_argument("--repo_id", type=str, default="moodx/tweettaglish-salintala", help="Hugging Face repository ID.")
     parser.add_argument("--base_branch", type=str, default="annotated-updates", help="The branch to pull the dataset from.")
     parser.add_argument("--new_branch", type=str, default="annotated-updates", help="The branch to push the new dataset to.")
     args = parser.parse_args()
