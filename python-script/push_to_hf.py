@@ -39,7 +39,7 @@ combined_datasets = DatasetDict({
 # huggingface-cli login
 
 # Define the ID of the EXISTING dataset repository on the Hub
-repo_id = "propanda02/TweetTaglish-SalinTala"
+repo_id = "moodx/tweettaglish-salintala"
 
 # Push the dataset to the Hub on MAIN branch
 combined_datasets.push_to_hub(repo_id)
