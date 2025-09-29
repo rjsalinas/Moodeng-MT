@@ -167,11 +167,11 @@ def process_csv_in_batches(input_csv_path, output_csv_path, source_column, targe
 
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    INPUT_FILE = os.path.join(script_dir, 'init-preprocess', 'cleaned_tweets.csv') # Change to cleaned_tweets.csv for FULL DATASET
-    OUTPUT_FILE = os.path.join(script_dir, 'annotated-preprocess', 'translated_tweets.csv')
+    INPUT_FILE = os.path.join(script_dir, 'init-preprocess', 'extracted_cleaned_tweets.csv')
+    OUTPUT_FILE = os.path.join(script_dir, 'annotated-preprocess', 'annotated_tweets.csv')
     SOURCE_TEXT_COLUMN = 'src'
     TARGET_TEXT_COLUMN = 'tgt'
-    BATCH_SIZE = 50
+    BATCH_SIZE = 100
 
     process_csv_in_batches(
         input_csv_path=INPUT_FILE,
