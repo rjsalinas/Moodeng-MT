@@ -4,7 +4,7 @@ import torch
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from peft import PeftModel, PeftConfig
 import re
-import emoji
+# # import emoji  # Commented out due to installation issues  # Commented out due to installation issues
 
 # ======================
 # Text Cleaning Function
@@ -28,7 +28,16 @@ def preprocess_text(text: str) -> str:
     s = re.sub(url_pattern, ' ', s)          # Remove URLs
     s = re.sub(mention_pattern, ' ', s)      # Remove mentions
     s = re.sub(hashtag_pattern, r'\1', s)   # Keep hashtag text, remove '#'
-    s = emoji.replace_emoji(s, replace=' ')  # Remove emojis
+    # Remove emojis using regex (alternative to emoji library)
+    emoji_pattern = re.compile("["
+        u"\U0001F600-\U0001F64F"  # emoticons
+        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+        u"\U0001F680-\U0001F6FF"  # transport & map symbols
+        u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+        u"\U00002702-\U000027B0"
+        u"\U000024C2-\U0001F251"
+        "]+", flags=re.UNICODE)
+    s = emoji_pattern.sub(' ', s)  # Remove emojis
 
     # Replace multiple whitespace chars with a single space and strip again
     s = re.sub(r'\s+', ' ', s).strip()
@@ -40,7 +49,7 @@ def preprocess_text(text: str) -> str:
 # ======================
 @st.cache_resource
 def load_model():
-    model_path = "./python-script/mbart-lora-finetuned"
+    model_path = "./LoRA-fine-tuned-mbart-tl2en-baseline-best"
     
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_path)

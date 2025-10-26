@@ -1,0 +1,2 @@
+epoch,model_dir,bleu,chrf,samples
+1,fine-tuned-mbart-tl2en-baseline-best,19.839535853377285,41.40601173625707,516

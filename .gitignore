@@ -1,22 +1,19 @@
-<<<<<<< HEAD
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
-=======
 # Fine-tuned mBART Model Project .gitignore
 # =============================================
 
 # Model Files and Checkpoints
 # ---------------------------
-# Exclude the actual fine-tuned model files (these are large and should be downloaded separately)
+# Exclude all fine-tuned model directories and files
 fine-tuned-mbart-tl2en/
 fine-tuned-mbart-tl2en-best/
+LoRA-fine-tuned-mbart-tl2en-baseline/
+LoRA-fine-tuned-mbart-tl2en-baseline-best/
+mbart-lora-r8-lr3e4/
+mbart50-finetuned-LoRA-best/
+mbart50-finetuned-LoRA-best_v2/
+mbart50-finetuned-LoRA-best_v3/
+
+# Model file extensions
 *.bin
 *.safetensors
 *.ckpt
@@ -24,22 +21,21 @@ fine-tuned-mbart-tl2en-best/
 *.pth
 *.h5
 *.hdf5
+*.model
+*.vocab
+*.merges
+*.bpe
 
-# Model Configuration (keep these for reference)
-# !fine-tuned-mbart-tl2en/config.json
-# !fine-tuned-mbart-tl2en/tokenizer.json
-# !fine-tuned-mbart-tl2en/special_tokens_map.json
-
-# Training Artifacts
-# ------------------
-# Exclude training logs and checkpoints
+# Training Artifacts and Logs
+# ---------------------------
+training_logs/
 logs/
 *.log
-training_logs/
 checkpoints/
 wandb/
 runs/
 lightning_logs/
+training/
 
 # Large Files and Backups
 # ------------------------
@@ -49,10 +45,20 @@ large_files_backup/
 *.tmp
 *.temp
 
+# Virtual Environment
+# -------------------
+moodeng_env/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+.env/
+
 # Data Files
 # -----------
-# Keep CSV files as per user preference, but exclude large data files
-# *.csv  # Commented out since user wants to keep CSV files
+# Exclude large data files but keep small CSV files for reference
 *.xlsx
 *.xls
 *.json.gz
@@ -60,6 +66,11 @@ large_files_backup/
 *.parquet
 *.hdf5
 *.h5
+*.tar.gz
+*.zip
+*.rar
+*.7z
+*.bz2
 
 # Python and Development
 # ----------------------
@@ -80,18 +91,13 @@ lib64/
 parts/
 sdist/
 var/
-<<<<<<< HEAD
-=======
 wheels/
->>>>>>> origin/training_test
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
 
-<<<<<<< HEAD
 # PyInstaller
-#  Usually these files are written by a python script from a template
 *.manifest
 *.spec
 
@@ -138,66 +144,6 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-# VS Code
-.vscode/
-
-# Data, models, logs
-data/
-*.csv
-*.tsv
-*.dat
-*.db
-*.sqlite
-*.h5
-*.hdf5
-*.pkl
-*.joblib
-*.model
-*.ckpt
-*.weights
-*.log
-logs/
-runs/
-output/
-results/
-models/
-checkpoints/
-
-# Environment files
-.env
-.env.*
-venv/
-ENV/
-env/
-.venv/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# PyCharm
-.idea/
-
-# Mac OS
-.DS_Store
-
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-=======
-# Virtual Environments
-# -------------------
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
-.venv/
-.env/
-
 # IDE and Editor Files
 # --------------------
 .vscode/
@@ -207,27 +153,8 @@ venv.bak/
 *~
 .DS_Store
 Thumbs.db
-
-# Jupyter Notebooks
-# -----------------
-# .ipynb_checkpoints/
-# *.ipynb
-
-# Testing and Coverage
-# --------------------
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
-coverage.xml
-*.cover
-.hypothesis/
-
-# Documentation Build
-# -------------------
-docs/_build/
-site/
+ehthumbs.db
+Desktop.ini
 
 # OS Generated Files
 # ------------------
@@ -236,66 +163,30 @@ site/
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
-Thumbs.db
 
-# Temporary Files
-# ---------------
-*.tmp
-*.temp
-*.swp
-*.swo
-*~
-
-# Large Dataset Files
-# -------------------
-# Exclude very large dataset files that shouldn't be in version control
-*.tar.gz
-*.zip
-*.rar
-*.7z
-*.bz2
-
-# Environment Variables
-# ---------------------
+# Environment Variables and Secrets
+# ----------------------------------
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# API Keys and Secrets
-# --------------------
+.env.*
 secrets.json
 config.ini
 *.key
 *.pem
 *.p12
 
-# Backup and Archive Files
-# -------------------------
-*.backup
-*.bak
-*.old
-*.orig
-*.rej
-
-# Log Files
-# ----------
-*.log
-*.out
-*.err
-nohup.out
+# Documentation Build
+# -------------------
+docs/_build/
+site/
 
 # Cache Directories
-# ------------------
+# -----------------
 .cache/
 .pytest_cache/
 .mypy_cache/
 
 # Model Training Specific
 # -----------------------
-# Exclude model training artifacts
 model_checkpoints/
 best_model/
 latest_model/
@@ -303,37 +194,32 @@ training_state/
 optimizer_state/
 scheduler_state/
 
-# Keep important files
-# --------------------
-!README.md
-!README_TRANSLATION.md
-!model_training_document.md
-!PREPROCESSING_PIPELINE.md
-!*.py
-!*.md
-!*.txt
-!*.csv
-!requirements*.txt
-!rules.json
-!run_*.bat
-!run_*.ps1
-
-# Exclude specific large files that might be accidentally included
-# --------------------------------------------------------------
-*.model
-*.vocab
-*.merges
-*.bpe
-
-dataset
-init-preprocess/*
-annotated-preprocess/*
+# Specific large files and directories
+# ------------------------------------
+dataset/
+init-preprocess/
+annotated-preprocess/
+corpus-parallel-txt/
 python-script/annotated-preprocess/find_duplicate.sh
 python-script/annotated-preprocess/annotations_temp.csv
 python-script/annotated-preprocess/translated_tweets_bak.csv
 python-script/init-preprocess/cleaned_tweets.csv
 python-script/init-preprocess/preprocessed.csv
 python-script/annotated-preprocess/translated_tweets.csv
-
-corpus-parallel-txt/*
 local_annotated_with_ids/
+
+# Keep important files
+# --------------------
+!README.md
+!README_TRANSLATION.md
+!model_training_document.md
+!PREPROCESSING_PIPELINE.md
+!METHODOLOGY.md
+!TRAINING_RESTART_GUIDE.md
+!*.py
+!*.md
+!*.txt
+!requirements*.txt
+!rules.json
+!run_*.bat
+!run_*.ps1

@@ -1,0 +1,2 @@
+model_dir,bleu,chrf,samples
+fine-tuned-mbart-tl2en-baseline-best,29.713550190449105,49.481397522431074,266
